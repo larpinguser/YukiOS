@@ -78,7 +78,9 @@ export function resolveGhUrl(url) {
   let resolved = mirror.ghTemplate.replace("${u}", u).replace("${r}", r).replace("${b}", b).replace("${p}", cleanP);
 
   if (!cleanP && resolved.endsWith("/")) {
-    resolved = resolved.slice(0, -1);
+    if (!url.endsWith("/")) {
+      resolved = resolved.slice(0, -1);
+    }
   }
   return resolved;
 }
@@ -86,7 +88,7 @@ export function resolveGhUrl(url) {
 export function resolveNpmUrl(url) {
   if (typeof url !== "string") return url;
   const match = url.match(
-    /https?:\/\/(cdn\.jsdelivr\.net|quantil\.jsdelivr\.net|originfastly\.jsdelivr\.net|gcore\.jsdelivr\.net|esm\.sh|cdn\.statically\.io|cdn\.staticdelivr\.com)\/(?:npm\/)?(.*)/
+    /https?:\/\/(cdn\.jsdelivr\.net|quantil\.jsdelivr\.net|originfastly\.jsdelivr\.net|gcore\.jsdelivr\.net|esm\.sh|cdn\.statically\.io|cdn\.staticdelivr\.com)\/(?:npm(?:\/|$))?(.*)/
   );
   if (!match) return url;
 
@@ -285,6 +287,10 @@ export function resolveIconUrl(url) {
   const isCdn = isCdnHostname(hostname);
   const normalizedUrl = url.startsWith("/") ? url : `/${url}`;
 
+  if (normalizedUrl === "/static/apps/azahar/index.html") {
+    return normalizedUrl;
+  }
+
   if (normalizedUrl.startsWith("/static/")) {
     return resolveYukiAsset(normalizedUrl);
   }
@@ -406,11 +412,18 @@ export async function fetchHtmlAsBlobUrl(url) {
       rootBase = getCdnRepoBase(baseHrefFromDoc) || new URL("/", baseHrefFromDoc).href;
     } catch {}
   }
-
   const isIgnored =
-    ["angrybirds", "subway"].some((p) => url.toLowerCase().includes(p.toLowerCase())) ||
-    html.includes("cdn.jsdelivr") ||
-    html.includes("cdn.jsdelivr.net");
+    [
+      "angrybirds",
+      "subway",
+      "azahar",
+      "catgoesfishing",
+      "cat goes fishing",
+      "tabs",
+      "catfish",
+      "gamesforaetheris",
+      "cat_fish"
+    ].some((p) => url.toLowerCase().includes(p.toLowerCase())) || url.toLowerCase().includes("catgoesfishing.html");
 
   let rewritten = html;
   if (!isIgnored) {
@@ -457,7 +470,7 @@ export async function fetchHtmlAsBlobUrl(url) {
 
   function resolve(url) {
     if (typeof url !== 'string' || !url) return url;
-    if (url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('
+    if (url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')) return url;
     let p = url;
     if (p.startsWith('/')) {
       p = p.slice(1);
@@ -536,13 +549,7 @@ export async function fetchHtmlAsBlobUrl(url) {
   const hasBase = /<base\b[^>]*>/i.test(rewritten);
 
   if (isIgnored) {
-    if (!hasBase) {
-      if (/<head\b[^>]*>/i.test(rewritten)) {
-        withBase = rewritten.replace(/<head\b[^>]*>/i, (m) => `${m}\n<base href="${baseHref}">`);
-      } else {
-        withBase = `<base href="${baseHref}">\n${rewritten}`;
-      }
-    }
+    withBase = rewritten;
   } else if (hasBase) {
     withBase = rewritten.replace(/<base\b[^>]*>/i, (m) => `${m}\n${injectedScripts}`);
   } else if (/<head\b[^>]*>/i.test(rewritten)) {

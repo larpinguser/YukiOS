@@ -1,3 +1,5 @@
+import { os } from "../os/index.js";
+
 export function setupWindowControls(win, wm) {
   const closeBtn = win.querySelector(".close-btn");
   const maxBtn = win.querySelector(".maximize-btn");
@@ -6,6 +8,10 @@ export function setupWindowControls(win, wm) {
 
   if (closeBtn) {
     closeBtn.onclick = () => {
+      if (os.tray.isRegistered(win.id)) {
+        os.tray.sendToTray(win.id);
+        return;
+      }
       wm._silenceWindow(win);
       wm.removeFromTaskbar(win.id);
       if (win.dataset.isGame === "true") {
@@ -32,5 +38,13 @@ export function setupWindowControls(win, wm) {
 
   if (downloadBtn) {
     downloadBtn.onclick = () => wm._downloadWindowContent(win);
+  }
+
+  const externalBtn = win.querySelector(".external-btn");
+  if (externalBtn) {
+    externalBtn.onclick = () => {
+      const url = win.dataset.externalUrl || "";
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
+    };
   }
 }

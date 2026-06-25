@@ -1,32 +1,27 @@
-import { StorageKeys } from "./settings.js";
+import { os } from "./os/index.js";
+
+const ANALYTICS_QUEUE_KEY = "yuki_analytics_queue";
+const ENDPOINT_BASE = "https://analytics.liventcord-a60.workers.dev";
+const ENDPOINT = ENDPOINT_BASE + "/analytics";
+const hostname = window.location.hostname;
+const ANALYTICS_DISABLED = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+
+const FLUSH_INTERVAL_MS = 30000;
+const MAX_QUEUE_SIZE = 15;
+
+let cachedPlayCounts = null;
+let playCountsPromise = null;
+
+const LIVE_STATS_TTL_MS = 5 * 60 * 1000;
+let cachedLiveStats = null;
+let liveStatsCacheTime = 0;
+let liveStatsPromise = null;
 
 let pageLoadTime = Date.now();
+let flushTimer = null;
 
-const CLOSE_ANALYTICS_EXCLUDED_APPS = new Set(["aboutApp"]);
-const CUSTOM_APP_PREFIX = "custom-";
-const ANALYTICS_DISABLED_KEY = StorageKeys.analyticsDisabled;
-
-function isAnalyticsDisabled() {
-  return localStorage.getItem(ANALYTICS_DISABLED_KEY) === "true";
-}
-
-function shouldIgnoreApp(app) {
-  if (!app) return false;
-  return CLOSE_ANALYTICS_EXCLUDED_APPS.has(app) || app.startsWith(CUSTOM_APP_PREFIX);
-}
-
-function isBlocked(app) {
-  if (isAnalyticsDisabled()) return true;
-  if (shouldIgnoreApp(app)) return true;
-  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") return true;
-  return false;
-}
-
-export function initAnalytics() {
-  pageLoadTime = Date.now();
-  const base = getAnalyticsBase("hit-page");
-  if (isBlocked(base.app)) return;
-  sendAnalytics({ ...base, event: "start" });
+function shouldExcludeFromAnalytics(app) {
+  return app?.startsWith("custom-");
 }
 
 export function getAnalyticsBase(app) {
@@ -39,60 +34,160 @@ export function getAnalyticsBase(app) {
   };
 }
 
-export function sendAnalytics(data) {
-  if (isBlocked(data?.app)) return;
-
-  if (window.AdsManager?.analyticsHook) {
-    window.AdsManager.analyticsHook(data);
+function loadQueue() {
+  if (ANALYTICS_DISABLED) return [];
+  try {
+    return os.storage.get(ANALYTICS_QUEUE_KEY) || [];
+  } catch {
+    return [];
   }
+}
 
-  fetch("https://analytics.liventcord-a60.workers.dev/analytics", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
-  }).catch(() => {});
+function saveQueue(q) {
+  if (ANALYTICS_DISABLED) return;
+  os.storage.set(ANALYTICS_QUEUE_KEY, q);
+}
+
+function sendBatch(events) {
+  if (!events.length) return;
+  const payload = JSON.stringify(events);
+  const sent = navigator.sendBeacon ? navigator.sendBeacon(ENDPOINT, payload) : false;
+  if (!sent) {
+    fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload
+    }).catch(() => {});
+  }
+}
+
+export function flushQueue() {
+  if (ANALYTICS_DISABLED) return;
+  const queue = loadQueue();
+  if (!queue.length) return;
+  os.storage.remove(ANALYTICS_QUEUE_KEY);
+  sendBatch(queue);
+}
+
+function scheduleFlush() {
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    flushQueue();
+  }, FLUSH_INTERVAL_MS);
+}
+
+function queueEvent(event) {
+  if (ANALYTICS_DISABLED) return;
+  const queue = loadQueue();
+  queue.push(event);
+  if (queue.length >= MAX_QUEUE_SIZE) {
+    os.storage.remove(ANALYTICS_QUEUE_KEY);
+    sendBatch(queue);
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+  } else {
+    saveQueue(queue);
+    scheduleFlush();
+  }
+}
+
+export function initAnalytics() {
+  if (ANALYTICS_DISABLED) return;
+  pageLoadTime = Date.now();
+  flushQueue();
+  queueEvent({
+    app: "hit-page",
+    event: "start",
+    timestamp: Date.now(),
+    sessionAgeMs: 0
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushQueue();
+  });
+  window.addEventListener("pagehide", flushQueue);
 }
 
 export function sendLaunchAnalytics(app) {
-  if (isBlocked(app)) return;
-
-  const data = { ...getAnalyticsBase(app), event: "launch" };
-
-  if (window.AdsManager?.analyticsHook) {
-    window.AdsManager.analyticsHook(data);
-  }
-
-  sendAnalytics(data);
+  if (ANALYTICS_DISABLED) return;
+  if (shouldExcludeFromAnalytics(app)) return;
+  queueEvent({
+    app,
+    event: "launch",
+    timestamp: Date.now(),
+    sessionAgeMs: Date.now() - pageLoadTime
+  });
 }
 
 export function recordUsage(winId) {
-  const startTime = Date.now();
+  if (ANALYTICS_DISABLED) return;
+  const start = Date.now();
   const win = document.getElementById(winId);
   if (!win) return;
-
-  const appId = win.dataset.appId || "";
-  if (isBlocked(appId)) return;
-
+  const appId = win.dataset.appId;
+  if (shouldExcludeFromAnalytics(appId)) return;
   let sent = false;
-
-  const sendUsage = () => {
+  const send = () => {
     if (sent) return;
     sent = true;
-
-    const payload = {
+    queueEvent({
       app: appId,
       event: "usage",
-      durationMs: Date.now() - startTime,
+      durationMs: Date.now() - start,
       timestamp: Date.now(),
       sessionAgeMs: Date.now() - pageLoadTime
-    };
-
-    if (window.AdsManager?.analyticsHook) {
-      window.AdsManager.analyticsHook(payload);
-    }
-
-    sendAnalytics(payload);
+    });
   };
+  win.querySelector(".close-btn")?.addEventListener("click", send);
+}
 
-  win.querySelector(".close-btn")?.addEventListener("click", sendUsage);
+export async function fetchGamePlayCounts() {
+  if (ANALYTICS_DISABLED) {
+    console.error("Analytics disabled, skipping gameplay count fetch");
+    return {};
+  }
+  if (cachedPlayCounts) return cachedPlayCounts;
+  if (playCountsPromise) return playCountsPromise;
+
+  playCountsPromise = (async () => {
+    try {
+      const res = await fetch(ENDPOINT_BASE + "/api/game-play-counts");
+      if (!res.ok) return {};
+      const data = await res.json();
+      cachedPlayCounts = data;
+      return data;
+    } catch {
+      return {};
+    }
+  })();
+
+  return playCountsPromise;
+}
+
+export function getCachedPlayCounts() {
+  return cachedPlayCounts || {};
+}
+
+export async function fetchLiveStats() {
+  if (ANALYTICS_DISABLED) return null;
+  const now = Date.now();
+  if (cachedLiveStats && now - liveStatsCacheTime < LIVE_STATS_TTL_MS) return cachedLiveStats;
+  if (liveStatsPromise) return liveStatsPromise;
+  liveStatsPromise = (async () => {
+    try {
+      const res = await fetch(ENDPOINT_BASE + "/live");
+      if (!res.ok) return null;
+      const data = await res.json();
+      cachedLiveStats = data;
+      liveStatsCacheTime = Date.now();
+      return data;
+    } catch {
+      return null;
+    } finally {
+      liveStatsPromise = null;
+    }
+  })();
+  return liveStatsPromise;
 }

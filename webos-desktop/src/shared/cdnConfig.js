@@ -4,6 +4,9 @@ export const CDN_CONFIG = {
     get games() {
       return {
         base: resolveGhUrl("https://cdn.jsdelivr.net/gh/Reeyuki/yukios-games@main"),
+        archiveBase: resolveGhUrl(
+          "https://cdn.jsdelivr.net/gh/Reeyuki/yukios-games@1a4843dd9c0eb267d802625234e54fd6f9a6c9b7"
+        ),
         ref: "main"
       };
     },
@@ -46,8 +49,8 @@ export const CDN_CONFIG = {
       path: "jszip@3.10.1/dist/jszip.min.js"
     },
     docx: {
-      version: "9.6.1",
-      path: "docx@9.6.1/build/index.js"
+      version: "8.5.0",
+      path: "docx@8.5.0/build/index.js"
     },
     clippyjs: {
       version: "latest",
@@ -67,6 +70,23 @@ export const CDN_CONFIG = {
       version: "stable",
       loader: "https://cdn.emulatorjs.org/stable/data/loader.js",
       data: "https://cdn.emulatorjs.org/stable/data/"
+    },
+    three: {
+      version: "0.160.0",
+      base: "https://esm.sh/three@0.160.0"
+    },
+    "7z-wasm": {
+      version: "1.2.0",
+      path: "7z-wasm@1.2.0/7zz.es6.js",
+      wasm: "7z-wasm@1.2.0/7zz.wasm"
+    },
+    "archive-wasm": {
+      version: "1.7.0",
+      path: "archive-wasm@1.7.0/dist/archive-wasm.umd.cjs"
+    },
+    emojiMart: {
+      version: "latest",
+      path: "emoji-mart@latest/dist/browser.js"
     }
   }
 };
@@ -75,6 +95,10 @@ export function getLibraryUrl(libraryName, type = "path") {
   const lib = CDN_CONFIG.libraries[libraryName];
   if (!lib) return null;
 
+  if (libraryName === "three") {
+    return lib.base;
+  }
+
   const path = lib[type] || lib.path;
   if (!path) return null;
 
@@ -82,7 +106,20 @@ export function getLibraryUrl(libraryName, type = "path") {
     return `https://unpkg.com/@ruffle-rs/ruffle/ruffle.js`;
   }
 
-  return `${CDN_CONFIG.repos.npm.base}/${path}`;
+  if (libraryName === "7z-wasm") {
+    return `https://unpkg.com/${path}`;
+  }
+
+  if (libraryName === "clippyjs") {
+    return `https://esm.sh/${path}`;
+  }
+
+  if (libraryName === "docx") {
+    return `https://esm.sh/docx@8.5.0`;
+  }
+
+  const npmBase = CDN_CONFIG.repos.npm.base;
+  return npmBase.endsWith("/") ? `${npmBase}${path}` : `${npmBase}/${path}`;
 }
 
 export function getRepoUrl(repoName, path) {

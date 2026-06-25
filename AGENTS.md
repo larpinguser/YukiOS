@@ -1,386 +1,798 @@
-# Yuki OS Architecture Guide
-Never add comments or docstrings
-Never spawn a browser for testing
-## Overview
+# YukiOS - Agent Reference
 
-Yuki OS is a browser-based webOS-style desktop environment that emulates a complete operating system within the web browser. It provides a unified windowed interface for 30+ built-in applications, 100+ games, multiple emulators (DOS via JS-DOS, x86 via V86), productivity tools, and system utilities. Everything runs in a sandboxed environment with persistent file storage, notifications, settings, and a virtual filesystem.
+You are working under webos-desktop directory. when src is mentioned it means webos-desktop/
 
-**Key Capabilities:**
-- Windowed desktop with drag, resize, snap, minimize/maximize
-- Virtual filesystem (BrowserFS) with IndexedDB persistence
-- Game/app support: Ruffle Flash, WebAssembly, native emulators
-- Desktop notifications, user profiles, achievements, analytics
-- Service-oriented architecture with dependency injection
-- Single-file HTML deployment with PWA support
+## Hard Rules
+
+- Never run `npm/pnpm format` or `npm/pnpm bf`
+- Never add comments, docstrings, or `/* */` blocks in CSS, JS, or HTML other than "JSDoc" for complex functions
+- Never spawn a browser for testing
+- Before finalizing any code changes, run `pnpm build:dev` in `webos-desktop/`. A change that breaks the build is
+  incomplete.
+- Always use CSS variables from `src/styles/style.css`. Never hardcode colors.
+- When making significant changes, new features, or new apps: you must register them in src/news.js with an icon, title,
+  and a punchy, active-voice description under 15 words. Bad: 'First-time setup now includes a dedicated profile
+  step...' Good: 'Choose your nickname and avatar during setup, with a quick final preview!'
+- When adding a new app, add a `description` field to its manifest entry in `src/registry/AppManifest.js`
+- Always use StorageKeys from `src/StorageKeys.js` for localStorage access. Never hardcode localStorage key strings.
+- Always use `src/framework.js` barrel for app-level imports. When writing a new app, import
+  `{ BaseApp, PersistenceTypes, os, StorageKeys, APP_MANIFESTS }` from `"../framework.js"` instead of separate modules.
+  Import StorageKeys and use the defined constants. If a new key is needed, add it to StorageKeys.js first.
+- Never use this.wm.\*, always use os.window module for window operations
+- Always use `os.storage` API instead of bare `localStorage`; the storage module handles serialization/deserialization
+  automatically.
+- Never use browser native alerts, prompts, or confirms (alert(), prompt(), confirm()). Always use the OS-level dialog
+  API (`os.dialog`) instead. Use `os.dialog.alert(title, message)`, `os.dialog.confirm(title, message)`, or
+  `os.dialog.prompt(title, message, defaultValue?)`. For file selection, use `os.dialog.fileOpen()` or
+  `os.dialog.fileSave()`.
+- Never use `document.querySelector`, `document.querySelectorAll`, or direct DOM manipulation methods. Always use the
+  utility functions from `src/shared/domUtils.js` instead. Import and use `$` (querySelector), `$$` (querySelectorAll),
+  `bindEvent`, `toggleClass`, `setText`, `setHTML`, `createElement`, etc. For general utility functions, use
+  `src/utils/utils.js` (e.g., `formatSize`, `isImageFile`, `isTextFile`, `pluralize`).
+- Use os.notify.send() for discrete, user-facing application events that represent a state change or completion, and
+  ensure notifications are not emitted from high-frequency, repeating, or continuously-updating processes.
+- If a change introduces a new system, abstraction, manager, API surface, or reusable capability, create a new file and
+  integrate it via imports. Only modify existing files if the change is a direct refinement of existing logic without
+  introducing a new responsibility boundary.
+- Always use `KeybindManager` from `src/keybindManager.js` for keyboard shortcuts instead of raw `keydown` listeners
+  with hardcoded key checks. Use `KeybindManager.matches(event, id)` to check key combinations and register new keybinds
+  in `KEYBIND_DEFINITIONS` inside that file. Never define key combos inline in event handlers.
+- If user asks you to create a new app, read DEVELOPMENT.md to learn how to create a new app.
 
 ---
 
-## Architecture Overview
+## Code Quality Guidelines
 
-Yuki OS uses a **service-oriented, event-driven architecture** with a central services container that all applications depend on.
+Write modular, clean, and DRY code. Follow these principles:
 
-**Core Pattern:**
+- **Modularity**: Separate concerns into focused modules. Each file should have a single, clear responsibility. Avoid
+  monolithic files that handle multiple unrelated concerns.
+- **Single Responsibility**: Functions and classes should do one thing well. If a function does more than one thing,
+  split it into smaller, focused functions.
+- **DRY (Don't Repeat Yourself)**: Never duplicate logic. Use shared utilities from `src/shared/` instead of
+  reimplementing common functionality. If you find yourself writing the same code in multiple places, extract it into a
+  reusable function.
+- **Prefer Existing Utilities**: Before writing new utility functions, check `src/shared/` for existing helpers. Common
+  patterns like dialogs, asset resolution, and platform detection already have implementations.
+- **Clean Function Names**: Use descriptive, action-oriented function names. `installApp()` is better than `doIt()`.
+  `validateUrl()` is better than `check()`.
+- **Avoid Deep Nesting**: More than 3 levels of nesting indicates a need for refactoring. Use early returns and guard
+  clauses to reduce nesting.
+- **Keep Functions Small**: Functions should fit on a screen (typically < 50 lines). If a function is longer, consider
+  splitting it into smaller helper functions.
+- **Use Meaningful Variables**: Variable names should reveal intent. `userList` is better than `data`. `isValid` is
+  better than `flag`.
+- **Avoid Magic Numbers/Strings**: Extract constants to the top of the file or a constants file. Use CSS variables for
+  styling values.
+- **Consistent Patterns**: Follow existing patterns in the codebase. If similar apps use a certain structure, follow
+  that structure for new apps.
+- **Enforce KISS and YAGNI:** Write the absolute minimum code required to make current tests pass; do not build abstract
+  factories, extra interfaces, or future-proof scaffolding for features that are not explicitly requested in the prompt.
+
+---
+
+## Styling System
+
+YukiOS uses a dark glassmorphism theme with a comprehensive theming system. All rules below are non-negotiable.
+
+- **CSS Variables**: Use `--brand` (accent), `--text-primary`, `--text-secondary`, `--bg-primary`, `--bg-secondary`,
+  `--glass`, `--glass-border`, `--error`. Never introduce new hues or hardcoded values.
+- **Color Hue**: All colors use unified hue 265 (purple). Never mix in gray or blue hues.
+- **Glassmorphism**: `backdrop-filter: blur(32px+)`, semi-transparent `rgba` backgrounds (0.6–0.98 opacity), subtle
+  borders (`rgba(255,255,255,0.08–0.12)`).
+- **Depth**: Multi-layer box shadows - `0 24px 64px rgba(0,0,0,0.65)` + inset highlight.
+- **Typography**: System fonts or JetBrains Mono for code. 13–16px base (minimum 12px for any readable text). Opacity
+  0.7–0.9 for secondary text. Never use font-size below 12px for user-facing content unless absolutely necessary (e.g.,
+  badges, timestamps).
+- **Radius**: 6–14px depending on element size.
+- **Transitions**: 0.1–0.2s for hover states.
+- **Light Theme**: Override via `html[data-theme="light"]` with solid colors (`#fff`, `#f0f0f0`, `#111`, `#666`).
+- **Scrollbars**: 8px width, `rgba(255,255,255,0.12)` thumb.
+- **Checkboxes/Inputs**: Never use native browser checkboxes, plain inputs, or dropdowns. Always use `appearance: none`,
+  @src/shared/selectMenu.js, and @src/shared/rangeSlider.js component. `-webkit-appearance: none`, custom
+  border/background, and `::after` pseudo-element for checkmarks via CSS variables.
+- **Theming System**: Comprehensive theme engine with 25+ built-in themes, transparent UI toggle, advanced brightness
+  controls, and GUI scale options. Themes are managed via `settings.js` and applied through CSS variables.
+- Never introduce new inline styles.
+- Prefer CSS classes.
+- Existing inline styles may be migrated to css classes when touched.
+- New declarative UI definitions should use class names instead of style objects.
+
+## File Size Guidelines
+
+Target maximums:
+
+- Utility modules: <300 lines
+- Runtime modules: <500 lines
+- Apps: <1000 lines
+
+When a file exceeds these sizes:
+
+- Prefer extracting focused modules.
+- Prefer composition over adding more methods.
+- New features should be added to extracted modules when possible.
+
+## Do not increase file size when a clean extraction is feasible.
+
+## Architecture
 
 ```
 main.js initializes services
     ↓
 Services Container (WindowManager, FileSystemManager, NotificationCenter, EventBus)
     ↓
-30+ Applications (all inherit BaseApp, receive injected services)
+40+ Applications (all inherit BaseApp, receive injected services)
     ↓
 Desktop UI renders windows, taskbar, start menu
 ```
 
-Every application follows a consistent lifecycle:
+**App lifecycle:**
 
-1. **Instantiation** — App receives services: `new ExplorerApp(services)`
-2. **Registration** — App attached to services object
-3. **Launch** — User clicks app → AppLauncher dispatches
-4. **Open** — App's `open()` creates window via WindowManager
-5. **Running** — Window receives user input, lifecycle events
-6. **Close** — `onClose(winId)` cleanup hook called
-
----
-
-## Core Services
-
-All applications receive these injected services in their constructor.
-
-### WindowManager
-**File:** `webos-desktop/src/windowManager.js`
-
-Manages window lifecycle, z-ordering, dragging, resizing, snapping, and taskbar integration.
-
-| Method | Purpose |
-|--------|---------|
-| `createWindow(id, title, width, height, isGame)` | Create styled window element |
-| `mountWindow(win, winId, title, iconValue)` | Attach to desktop, make draggable/resizable, add taskbar |
-| `bringToFront(win)` | Raise z-index, focus window |
-| `closeWindow(win)` | Close window, cleanup, remove from taskbar |
-| `minimizeWindow(win)` | Hide window, mark taskbar minimized |
-| `maximizeWindow(win)` | Expand/restore window |
-
-**Features:** Window snapping (Win+Arrow), workspace management, taskbar preview, Steam integration
+1. **Definition** - App class created in `src/apps/`
+2. **Registration** - App added to `APP_DEFINITIONS` in `AppLoader.js` and metadata to `APP_MANIFESTS` in
+   `src/registry/AppManifest.js`
+3. **Instantiation** - `loadApps(services)` in `main.js` instantiates all registered apps and attaches to `services`
+   object
+4. **Launch** - `AppLauncher.launch(appId)` dispatches
+5. **Open** - `app.open()` creates window via `WindowManager`
+6. **Close** - `onClose(winId)` cleanup hook called
 
 ---
 
-### FileSystemManager
-**File:** `webos-desktop/src/fs.js`
+## OS Bridge API
 
-Virtual filesystem backed by BrowserFS with persistent storage via IndexedDB.
+The OS Bridge provides a unified API surface for applications to interact with system services. Instead of directly
+accessing kernel services (WindowManager, FileSystemManager, NotificationCenter, EventBus, TrayManager, AppLauncher),
+apps should use the `os.*` bridge.
 
-| Method | Purpose |
-|--------|---------|
-| `async readFile(path)` | Read file content |
-| `async safeWriteFile(path, content)` | Write file (string/Uint8Array) |
-| `async readdir(path)` | List directory contents |
-| `async mkdir(path)` | Create directory |
-| `async unlink(path)` | Delete file |
-| `async stat(path)` | Get file metadata |
-| `async copy(src, dst)` | Copy file/directory |
+**Import:**
 
-**Default Structure:**
-```
-/home/reeyuki/
-├── Desktop/              (desktop icons)
-├── Documents/INFO.txt
-├── Pictures/Wallpapers/  (13 default + custom)
-└── Apps/                 (user-created shortcuts)
+```javascript
+import { os } from "./os/index.js";
 ```
 
-**File Types (FileKind):**
-- TEXT — .txt, .md, .json, .js, .css
-- IMAGE — .png, .jpg, .webp, .gif
-- VIDEO — .mp4, .webm, .mov, .avi
-- AUDIO — .mp3, .wav, .ogg, .flac
-- ROM — .bin, .gba, .nds, .snes (emulator files)
-- OTHER — .zip, .exe, unknown types
+### Window API - `os.window`
+
+| Method                                      | Purpose                                     |
+| ------------------------------------------- | ------------------------------------------- |
+| `create(id, title, width, height, options)` | Create styled window element                |
+| `close(win)`                                | Close window, cleanup, remove taskbar entry |
+| `focus(win)`                                | Raise z-index, focus window                 |
+| `minimize(win)`                             | Hide window, mark taskbar minimized         |
+| `maximize(win)`                             | Expand/restore window                       |
+| `bringToFront(win)`                         | Raise z-index, focus window                 |
+| `addToTaskbar(winId, title, icon, color)`   | Add window to taskbar                       |
+| `removeFromTaskbar(winId)`                  | Remove window from taskbar                  |
+| `getWindowControls(externalUrl)`            | Get window control buttons HTML             |
+
+### Filesystem API - `os.fs`
+
+| Method                                                | Purpose                                                |
+| ----------------------------------------------------- | ------------------------------------------------------ |
+| `read(path, options)`                                 | Read file content (options: { encoding: "binary" })    |
+| `write(path, content, options)`                       | Write file content (options: { encoding, kind, icon }) |
+| `readdir(path)`                                       | Get directory contents                                 |
+| `mkdir(path)`                                         | Create directory recursively                           |
+| `delete(path, name)`                                  | Delete file or directory                               |
+| `exists(path)`                                        | Check if path exists                                   |
+| `copy(source, destination)`                           | Copy file/directory                                    |
+| `rename(oldPath, newPath)`                            | Rename file/directory                                  |
+| `isFile(path)`                                        | Check if path is a file                                |
+| `getFileKind(path)`                                   | Get file kind/metadata                                 |
+| `getFileIcon(path)`                                   | Get file icon path                                     |
+| `writeBinaryFile(path, name, blob, kind, icon)`       | Write binary file to blob storage                      |
+| `readBinaryFile(path, name)`                          | Read binary file from blob storage                     |
+| `deleteBinaryFile(path, name)`                        | Delete binary file from blob storage                   |
+| `renameBinaryFile(path, oldName, newName)`            | Rename binary file in blob storage                     |
+| `createFile(path, name, content, kind, icon, faIcon)` | Create file                                            |
+| `createFolder(path, name)`                            | Create folder                                          |
+| `deleteItem(path, name)`                              | Delete item (file or folder)                           |
+| `renameItem(path, oldName, newName)`                  | Rename item                                            |
+| `updateFile(path, name, content, meta)`               | Update file                                            |
+
+**Note:** Binary file methods use blob storage and require separate `name` parameter.
+
+### Notification API - `os.notify`
+
+| Method                          | Purpose                                                                |
+| ------------------------------- | ---------------------------------------------------------------------- |
+| `send(title, message, options)` | Show toast notification (options: { type, duration, icon, appSource }) |
+| `clear(id)`                     | Clear specific notification by ID                                      |
+| `clearAll()`                    | Clear all notifications                                                |
+| `getAll()`                      | Get all notifications                                                  |
+| `getCount()`                    | Get notification count                                                 |
+| `setDoNotDisturb(enabled)`      | Set do-not-disturb mode                                                |
+| `getDoNotDisturb()`             | Get do-not-disturb status                                              |
+
+### Tray API - `os.tray`
+
+| Method                                  | Purpose                                 |
+| --------------------------------------- | --------------------------------------- |
+| `register(winId, icon, label, options)` | Register window to system tray          |
+| `unregister(winId)`                     | Remove window from system tray          |
+| `updateIcon(winId, newIcon)`            | Update tray icon                        |
+| `updateLabel(winId, newLabel)`          | Update tray label                       |
+| `updateContextMenuItems(winId, items)`  | Update context menu items               |
+| `sendToTray(winId)`                     | Hide window + taskbar → tray            |
+| `restoreFromTray(winId)`                | Restore window + taskbar from tray      |
+| `getTrayItems()`                        | Get Map of all tray items (raw)         |
+| `getAllItems()`                         | Get array of all tray items (formatted) |
+| `updateItemVisibility(winId, visible)`  | Update item visibility                  |
+| `isRegistered(winId)`                   | Check if window is registered           |
+
+## Tray Register options:
+
+- `resident: boolean` - App stays in tray permanently (cannot be restored to window)
+- `showInTray: boolean` - App shows in tray icon area
+- `onClick: function` - Callback when tray icon clicked
+- `onQuit: function` - Callback when app is quit from tray
+- `contextMenuItems: array` - Custom context menu items (objects with label, action, icon, type)
+- `priority: number` - Sorting priority (higher = more prominent)
+
+### App API - `os.app`
+
+| Method                              | Purpose                      |
+| ----------------------------------- | ---------------------------- |
+| `launch(appId, options)`            | Launch app by ID             |
+| `launchGame(appId, isSwf, options)` | Launch game with SWF support |
+| `close(winId)`                      | Close app by window ID       |
+| `getRunningApps()`                  | Get list of running apps     |
+| `getAllApps()`                      | Get all registered apps      |
+| `getAppInfo(appId)`                 | Get app metadata             |
+| `hasApp(appId)`                     | Check if app is registered   |
+| `searchApps(query)`                 | Search apps by title         |
+
+### Events API - `os.events`
+
+| Method                 | Purpose                                        |
+| ---------------------- | ---------------------------------------------- |
+| `on(event, handler)`   | Register listener                              |
+| `off(event, handler)`  | Unregister listener                            |
+| `emit(event, data)`    | Fire event to all listeners                    |
+| `once(event, handler)` | Register one-time listener                     |
+| `clear(event)`         | Clear all listeners for an event or all events |
+| `listenerCount(event)` | Get listener count for an event                |
+
+**Standard events:** `SETTINGS_CHANGED`, `WINDOW_CREATED`, `WINDOW_FOCUSED`, `WINDOW_CLOSED`, `FILE_CHANGED`,
+`SESSION_INITIALIZED`, `AI_ACTION_EXECUTED`
+
+### Storage API - `os.storage`
+
+| Method            | Purpose                        |
+| ----------------- | ------------------------------ |
+| `get(key)`        | Get value from storage         |
+| `set(key, value)` | Set value in storage           |
+| `remove(key)`     | Remove value from storage      |
+| `clear()`         | Clear all storage              |
+| `has(key)`        | Check if key exists in storage |
+
+### Dialog API - `os.dialog`
+
+| Method                                  | Return                    |
+| --------------------------------------- | ------------------------- |
+| `alert(title, message)`                 | `Promise<void>`           |
+| `confirm(title, message)`               | `Promise<boolean>`        |
+| `prompt(title, message, defaultValue?)` | `Promise<string \| null>` |
+| `fileOpen(options?)`                    | `Promise<string \| null>` |
+| `fileSave(options?)`                    | `Promise<string \| null>` |
+| `openDirectory(options?)`               | `Promise<string \| null>` |
+
+`FileDialogOptions`: `{ defaultFileName?: string; initialPath?: string }`
+
+**Never use browser native alerts, prompts, or confirms. Always use `os.dialog.*`.**
 
 ---
 
-### NotificationCenter
-**File:** `webos-desktop/src/notificationCenter.js`
+## Shared Utilities - `src/shared/`
 
-Desktop notifications with Do-Not-Disturb mode, toast popups, and persistent history.
+Always prefer these over reimplementing logic.
 
-| Method | Purpose |
-|--------|---------|
-| `notify(title, message, type, duration, icon)` | Show toast notification |
-| `setDND(enabled)` | Toggle Do-Not-Disturb mode |
-| `getNotifications()` | Get notification history |
+### Dialog API - `os.dialog`
 
----
+| Method                                  | Return                    |
+| --------------------------------------- | ------------------------- |
+| `alert(title, message)`                 | `Promise<void>`           |
+| `confirm(title, message)`               | `Promise<boolean>`        |
+| `prompt(title, message, defaultValue?)` | `Promise<string \| null>` |
+| `fileOpen(options?)`                    | `Promise<string \| null>` |
+| `fileSave(options?)`                    | `Promise<string \| null>` |
+| `openDirectory(options?)`               | `Promise<string \| null>` |
 
-### EventBus
-**File:** `webos-desktop/src/core/EventBus.js`
+`FileDialogOptions`: `{ defaultFileName?: string; initialPath?: string }`
 
-Global pub-sub for cross-app communication without tight coupling.
+**Never use browser native alerts, prompts, or confirms. Always use `os.dialog.*`.**
 
-| Method | Purpose |
-|--------|---------|
-| `on(eventType, handler)` | Register listener |
-| `off(eventType, handler)` | Unregister listener |
-| `emit(eventType, ...args)` | Fire event to all listeners |
+### `conflictDialog.js`
 
-**Standard Events:**
-- `SETTINGS_CHANGED` — User changed a preference
-- `WINDOW_CREATED`, `WINDOW_FOCUSED`, `WINDOW_CLOSED` — Window lifecycle
-- `FILE_CHANGED` — Filesystem change detected
+| Function                                                       | Return                                                              |
+| -------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `showConflictDialog(fileName)`                                 | `Promise<{ action, applyToAll }>` - action: `replace`/`keep`/`skip` |
+| `resolveConflicts(items, existsCheck, getKey, applyToAllInit)` | `Promise<Array<{ item, action }>>`                                  |
 
----
+### Other shared helpers
 
-## Key Agents by Category
-
-### Application Management
-
-**AppLauncher** (`appLauncher.js`)
-- Central dispatcher for all app launches
-- Routes to app instance or creates iframe for games
-- Handles analytics, achievements, Steam stats tracking
-- Method: `launch(appId, swf, extra)` → main entry point
-
-**gamesList** (`gamesList.js`)
-- Registry of 100+ games/apps with metadata
-- `appMap` object where each key is app ID with type, title, url, icon
-
-**gameDescriptions** (`gameDescriptions.js`)
-- Rich metadata: title, description, genre, year, developer
-
-**appCreator** (`appCreator.js`)
-- UI for creating custom app shortcuts to external URLs
-- Auto-detects favicon, supports CORS proxy per app
-- Saves to `/home/reeyuki/Apps/` filesystem
+| File               | Exports                                                                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| `contextMenu.js`   | `showContextMenu`, `showDynamicContextMenu`, `showStartStyleMenu`, `hideMenu`, `refreshIcons`   |
+| `assetResolver.js` | `resolveUrl`, `resolveYukiAsset`, `fetchHtmlAsBlobUrl`, `resolveIconUrl`, `resolveWallpaperUrl` |
+| `iframeUtils.js`   | `resolveUrl`, `fetchHtmlAsBlobUrl`, `looksLikeHtml`, `isCdnGhUrl`                               |
+| `cdnConfig.js`     | `CDN_CONFIG`, `getLibraryUrl`, `getRepoUrl`                                                     |
+| `iconUtils.js`     | `resolveDesktopIcon`                                                                            |
+| `platformUtils.js` | `detectOS`, `isMobile`, `getBrowser`                                                            |
+| `coreMap.js`       | `detectCore`, `coreLabel`, `ROM_EXTS`                                                           |
+| `weatherCodes.js`  | `WEATHER_CODES`, `getWeatherIcon`, `getWeatherInfo`                                             |
+| `iframeAttrs.js`   | `IFRAME_ATTRS`                                                                                  |
 
 ---
 
-### File & Explorer System
+## App Registry
 
-**ExplorerApp** (`explorer.js`)
-- File manager with directory navigation, thumbnails, drag-drop
-- `open(path)`, `navigateTo(path)`, `deleteFile(path)`, `renameFile(old, new)`
+### AppLauncher - `appLauncher.js`
 
-**fileDisplay** (`fileDisplay.js`)
-- Renders different file types: images, videos, PDFs, code, text, markdown
+Central dispatcher. `launch(appId, swf, extra)` is the main entry point. Routes to app instance or creates sandboxed
+iframe for games. Handles analytics, achievements, Steam stats. Integrates with installed apps registry for app
+management.
 
-**archiveExtractor** (`archiveExtractor.js`)
-- ZIP/7z extraction utility, list archive contents
+### gamesList - `gamesList.js`
+
+Registry of 3700+ games/apps. `appMap[appId]` contains `{ type, title, url, icon, action }`.
+
+- Types: `"system"`, `"game"`, `"html"`, `"remote"`
+
+### gameDescriptions - `gameDescriptions.js`
+
+Rich metadata per app: title, description, genre, year, developer.
+
+### appCreator - `appCreator.js`
+
+UI to create custom shortcuts to external URLs. Auto-detects favicon, supports per-app CORS proxy. Saves to
+`/home/reeyuki/Apps/`.
+
+### installedApps - `installedApps.js`
+
+App registry system for managing installed/uninstalled apps. Provides dynamic app metadata, disable/uninstall support,
+and custom naming. Integrates with AppLauncher for app management.
 
 ---
 
-### Productivity Apps
+## Application Catalog
 
-**NotepadApp** — Text editor, file save/load
+### File & Explorer
 
-**MarkdownApp** — Split-pane markdown editor with live preview
-
-**YukiCode** (`monaco.js`) — Yuki Code is a remake of the open-source monaco editor that powers Visual Studio Code, and is integrated into Yuki OS
-
-**CalculatorApp** — Scientific calculator with memory functions
-
-**OfficeAppProxy** (`office.js`) — Office 365 viewer for .docx, .xlsx, .pptx
+| App              | File                  | Key Methods                                                                                                                                              |
+| ---------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ExplorerApp      | `explorer.js`         | `open(path)`, `navigateTo(path)`, `deleteFile(path)`, `renameFile(old, new)`, `openSaveDialog(defaultFileName, onSave)`, `openDirectoryDialog(onSelect)` |
+| fileDisplay      | `fileDisplay.js`      | Renders images, video, PDF, code, text, markdown                                                                                                         |
+| archiveExtractor | `archiveExtractor.js` | ZIP/7z extraction, list archive contents                                                                                                                 |
 
 ---
+
+## File/Directory Selection Dialogs
+
+The Explorer app provides built-in dialog methods for file and directory selection. These should be used alongside
+native browser dialogs.
+
+### Explorer Dialog Methods
+
+**Access Explorer app from services:**
+
+```javascript
+const explorerApp = this.services.explorerApp;
+```
+
+#### `openSaveDialog(defaultFileName, onSave)`
+
+Opens a file save dialog with Explorer UI. User can navigate directories and enter a filename.
+
+**Parameters:**
+
+- `defaultFileName` (string): Suggested filename for the save dialog
+- `onSave` (function): Callback that receives `(path, filename)` when user clicks Save
+
+**Usage:**
+
+```javascript
+explorerApp.openSaveDialog("myfile.txt", (path, filename) => {
+  const fullPath = path.join("/");
+  const filePath = `${fullPath}/${filename}`;
+  await os.fs.write(fullPath, filename, content);
+});
+```
+
+#### `openDirectoryDialog(onSelect)`
+
+Opens a directory selection dialog with Explorer UI. User can navigate and select a directory.
+
+**Parameters:**
+
+- `onSelect` (function): Callback that receives `path` (array) when user clicks Select
+
+**Usage:**
+
+```javascript
+explorerApp.openDirectoryDialog((path) => {
+  const pathStr = path.join("/");
+  await os.fs.mkdir(pathStr);
+});
+```
+
+#### `open(path, callback)`
+
+Opens Explorer in file selection mode when a callback is provided.
+
+**Parameters:**
+
+- `path` (array|string): Initial path to navigate to
+- `callback` (function): Callback that receives selected file path when user selects a file
+
+**Usage:**
+
+```javascript
+explorerApp.open(["Documents"], (selectedPath) => {
+  console.log("Selected file:", selectedPath);
+});
+```
+
+### Best Practices
+
+- **Always use Explorer dialogs** for file/directory selection instead of `showPrompt` for manual path input
+- **Use `openDirectoryDialog`** when you need the user to select a directory (e.g., save location)
+- **Use `openSaveDialog`** when saving a file with a user-specified name
+- **Use `open` with callback** when you need the user to select an existing file
+- **Handle null/undefined returns** - callbacks may not be called if user cancels the dialog
+
+### Productivity
+
+| App            | File        | Notes                                     |
+| -------------- | ----------- | ----------------------------------------- |
+| NotepadApp     | -           | Text editor, file save/load               |
+| MarkdownApp    | -           | Split-pane editor with live preview       |
+| YukiCode       | `monaco.js` | Monaco editor (VSCode engine) integration |
+| CalculatorApp  | -           | Scientific calculator with memory         |
+| OfficeAppProxy | `office.js` | Office 365 viewer for .docx/.xlsx/.pptx   |
 
 ### Media & Emulators
 
-**Camera** — Webcam access, photo capture
-
-**Model3DApp** (`model3d.js`) — Three.js 3D viewer (OBJ, GLTF, GLB)
-
-**YouTubeApp** — YouTube integration
-
-**JsDosApp** (`jsdos.js`) — DOS game emulation with Ruffle Flash support
-
-**V86App** (`v86.js`) — x86-64 full system emulation
-
----
+| App        | File         | Notes                              |
+| ---------- | ------------ | ---------------------------------- |
+| Camera     | -            | Webcam access, photo capture       |
+| Model3DApp | `model3d.js` | Three.js viewer for OBJ, GLTF, GLB |
+| YouTubeApp | -            | YouTube integration                |
+| JsDosApp   | `jsdos.js`   | DOS emulation + Ruffle Flash       |
+| V86App     | `v86.js`     | x86-64 full system emulation       |
 
 ### System Utilities
 
-**TerminalApp** — CLI shell with commands: ls, cd, mkdir, rm, cp, mv, cat, pwd, etc.
-
-**TaskManagerApp** — Window/process list, resource monitor, close apps
-
-**SettingsApp** — User preferences: theme, wallpaper, taskbar position, sound, DND, transparency, language
-
-**ProfileCustomizerApp** — Edit username, profile picture, desktop colors
-
-**AchievementsApp** — Track apps launched, games played, playtime milestones
-
-**AboutApp** — System info, version, credits
-
-**newsApp** (`news.js`) — News aggregation with categories
-
-**WeatherApp** (`weather.js`) — Current weather and forecast
-
-**CategoriesApp** (`categories.js`) — Organize games by genre/tag
-
----
+| App                  | File                  | Notes                                                                                |
+| -------------------- | --------------------- | ------------------------------------------------------------------------------------ |
+| TerminalApp          | -                     | CLI: ls, cd, mkdir, rm, cp, mv, cat, pwd, etc.                                       |
+| TaskManagerApp       | -                     | Window/process list, close apps                                                      |
+| SettingsApp          | -                     | Theme, wallpaper, taskbar, sound, DND, language, GUI scale, brightness, transparency |
+| ProfileCustomizerApp | -                     | Username, profile picture, desktop colors                                            |
+| AchievementsApp      | -                     | Tracks launches, playtime milestones, friend stats                                   |
+| AboutApp             | -                     | System info, version, credits                                                        |
+| newsApp              | `news.js`             | News aggregation with categories, unread bubble                                      |
+| WeatherApp           | `weather.js`          | Current weather and forecast                                                         |
+| CategoriesApp        | `categories.js`       | Organize games by genre/tag                                                          |
+| GuideApp             | `yukiOsGuide.js`      | Interactive guide and tutorial system                                                |
+| ClipboardManagerApp  | `clipboardManager.js` | Clipboard history and management                                                     |
 
 ### System Services
 
-**DesktopUI** (`desktopui.js`) — Desktop background, taskbar, start menu rendering
-
-**startMenu** (`startMenu.js`) — Start menu and app grid UI
-
-**system.js** — Wallpaper and theme management
-
-**wallpapers.js** — Wallpaper store (13 default + user custom)
-
-**settings.js** — Preference storage layer (localStorage wrapper)
-
-**audioMixer.js** — Global audio control, per-app volume
-
-**profileCustomizer.js** — User profile UI
-
-**analytics.js** — Usage tracking (app launches, playtime, features)
-
-**clippy.js** — Virtual assistant with contextual tips and animations
-
-**BrowserApp** — Lightweight web browser with bookmarks
+| Service       | File               | Role                                                        |
+| ------------- | ------------------ | ----------------------------------------------------------- |
+| DesktopUI     | `desktopui.js`     | Desktop background, taskbar, start menu                     |
+| startMenu     | `startMenu.js`     | Start menu and app grid UI                                  |
+| system.js     | -                  | Wallpaper and theme management                              |
+| wallpapers.js | -                  | Wallpaper store (13 default + custom)                       |
+| settings.js   | -                  | Preference storage (localStorage wrapper)                   |
+| audioMixer.js | -                  | Global audio, per-app volume via `createAudioTrack(appId)`  |
+| analytics.js  | -                  | Usage tracking (launches, playtime, features, friend stats) |
+| clippy.js     | -                  | Virtual assistant with contextual tips                      |
+| BrowserApp    | -                  | Lightweight web browser with bookmarks                      |
+| installedApps | `installedApps.js` | App registry for installed/uninstalled apps management      |
+| networkTray   | `networkTray.js`   | Network status display in system tray                       |
+| powerTray     | `powerTray.js`     | Battery/power indicator in system tray                      |
 
 ---
 
-## How to Add a New Application
+## Adding a Web App (URL-based)
 
-**Step 1:** Create app class inheriting BaseApp
-```
-Implement constructor(services) with injected services
-Implement open(options) to create window
-Implement onClose(winId) for cleanup
+For simple web apps that just load a URL in scramjet, you can use the web app system instead of creating a full app
+class. Web Apps use scramjet proxy underneath.
+
+### Step 1: Add Entry to AppManifest.js
+
+Add a manifest entry to `webos-desktop/src/registry/AppManifest.js` with `targetUrl` and `windowSize` fields:
+
+```javascript
+export const APP_MANIFESTS = [
+  // ... existing entries
+  {
+    serviceKey: "myWebApp",
+    enhanced: true,
+    type: "system",
+    title: "My Web App",
+    icon: "fas fa-globe",
+    launchType: "instance",
+    windowIdPatterns: ["my-web-app"],
+    category: "internet",
+    persistContentState: false,
+    clippy: { message: "Your app description here.", animation: ClippyAnimation.Show },
+    description: "Brief description under 15 words for the app guide.",
+    targetUrl: "https://example.com",
+    windowSize: ["90vw", "85vh"]
+  }
+];
 ```
 
-**Step 2:** Register in `main.js`
-```
-const myApp = new MyApp(services);
-services.myApp = myApp;
-Pass to AppLauncher constructor and then update appLauncher.js code
-```
+## Adding a New Declarative App
 
-**Step 3:** Add metadata to `gamesList.js`
-```
-appMap.myAppId = {
-  type: "system" | "game" | "html" | "remote",
-  title: "My App",
-  url: "optional/path",
-  icon: "fa-star",
-  action: () => appLauncher.myApp.open()
+Follow these steps to add a new app using the declarative framework with the centralized manifest system:
+
+### 1. Create App File
+
+Create `src/apps/myApp.js` with CSS import:
+
+```javascript
+import "../styles/myApp.css";
+import { BaseApp } from "../core/BaseApp.js";
+import { PersistenceTypes } from "../AppSchema.js";
+
+export class MyApp extends BaseApp {
+  constructor(services) {
+    super(services);
+  }
+
+  getDeclarativeSchema(opts) {
+    return {
+      id: "my-app",
+      name: "My App",
+      icon: "fas fa-star",
+      windows: [
+        {
+          id: "my-app-window",
+          title: "My App",
+          size: ["500px", "400px"],
+          icon: "fas fa-star",
+          ui: {
+            type: "element",
+            tag: "div",
+            props: {
+              className: "my-app-container"
+            },
+            children: [
+              {
+                type: "element",
+                tag: "button",
+                props: {
+                  textContent: "Click Me"
+                },
+                events: {
+                  click: {
+                    type: "custom:myAction",
+                    stopPropagation: true
+                  }
+                }
+              }
+            ]
+          },
+          events: {
+            window: {
+              keydown: {
+                type: "custom:handleKeydown",
+                stopPropagation: false
+              }
+            }
+          }
+        }
+      ],
+      state: {
+        initial: {
+          count: 0
+        },
+        persistence: PersistenceTypes.MEMORY
+      },
+      actions: {
+        myAction: (payload, event, element, state) => {
+          state.count += 1;
+        },
+        handleKeydown: (payload, event, element, state) => {
+          if (event.key === "Enter") {
+            // Handle enter key
+          }
+        }
+      },
+      onMount: (win, state, actionExecutor) => {
+        // Optional initialization logic
+      }
+    };
+  }
+
+  onClose(winId) {}
 }
 ```
 
-**Step 4:** Implement lifecycle hooks
-```
-open(options = {}) {
-  const winId = "myapp-window";
-  const win = this.services.windowManager.createWindow(winId, "Title");
-  win.innerHTML = "...ui...";
-  document.body.appendChild(win);
-  this.services.windowManager.mountWindow(win, winId, "Title", "icon");
-  this.openWindows.add(winId);
-}
+### 2. Add CSS Styling
 
-onClose(winId) {
-  this.openWindows.delete(winId);
-}
-```
+Create `src/styles/myApp.css` with YukiOS styling:
 
-**Step 5:** Use services
-```
-File I/O: this.services.fileSystem.readFile(path)
-Notifications: this.services.notificationCenter.notify(title, msg)
-Events: this.services.eventBus.on("SETTINGS_CHANGED", handler)
-Launch apps: this.services.appLauncher.launch("appId")
-```
-
----
-
-## Quick Reference
-
-### Services Injection Pattern
-
-All apps receive services in constructor:
-```
-constructor(services) {
-  this.services = services;
-  this.services.windowManager      // Window lifecycle
-  this.services.fileSystem          // File operations
-  this.services.notificationCenter  // Notifications
-  this.services.eventBus            // Event pub-sub
-  this.services.appLauncher         // App dispatcher
+```css
+.my-app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-secondary);
+  padding: 16px;
+  gap: 16px;
 }
 ```
 
-### Storage Keys (Settings)
+**Important:** Import the CSS at the top of your app file (as shown in step 1). Do not add `<link>` tags to
+`index.html`.
 
-| Key | Type | Default |
-|-----|------|---------|
-| theme | "light"\|"dark"\|"auto" | "auto" |
-| wallpaper | string | "wallpaper1.webp" |
-| taskbarPosition | "top"\|"bottom" | "bottom" |
-| soundEnabled | boolean | true |
-| dnd | boolean | false |
-| windowTransparency | 0-1 | 1 |
-| language | string | "en" |
+### 3. Add Entry to AppManifest.js
 
-### Content Delivery
+Add manifest entry to `src/registry/AppManifest.js`:
 
-**CDN Bases:**
-- Main: `https://cdn.statically.io/gh/reeyuki/yukios@a3efea2218a5d717290e72ea41cd341d14689ce5`
-- Games: `https://cdn.statically.io/gh/reeyuki/yukios-games@main`
+```javascript
+import { ClippyAnimation } from "../ai/clippy.js";
 
-**CORS Proxy:** Apps can enable proxy via appCreator for blocked URLs
-
-**HTML Sandboxing:** `fetchHtmlAsBlobUrl()` converts HTML to blob:// for secure execution
-
----
-
-## Troubleshooting
-
-**App not in start menu?** → Check gamesList.js registration and AppLauncher constructor
-
-**Window won't close?** → Verify onClose() implementation and cleanup of event listeners
-
-**File not displaying?** → Check FileKind detection or set manually in file object
-
-**CORS errors?** → Use proxy system or fetchHtmlAsBlobUrl() for sandboxing
-
-**Audio conflicts?** → Use audioMixer.createAudioTrack(appId) for per-app volume control
-
----
-
-## Key Interaction Flows
-
-**App Launch:**
-User clicks → AppLauncher.launch(appId) → Routes to app.open() → WindowManager.createWindow() → Window displayed with taskbar button
-
-**File Operations:**
-App writes to fileSystem → BrowserFS saves to IndexedDB → If Desktop path, notify DesktopUI → Desktop icons refresh
-
-**Settings Change:**
-SettingsApp.setSetting(key, value) → localStorage updated → EventBus.emit(SETTINGS_CHANGED) → Listening apps react
-
-**Game Launch:**
-AppLauncher checks game type → openIframeApp() → Resolves CDN URLs → Creates sandboxed iframe → Emulator/renderer loads
-
----
-
-## Build & Deployment
-
-**Tech Stack:** Vite 7.3.1, single-file HTML bundle with viteSingleFile plugin
-
-**Build Scripts:**
-```
-npm run dev      — Dev server with HMR
-npm run build    — Compile to dist/index.html (single file)
-npm run preview  — Preview production build
-npm run format   — Prettier formatting
-npm run lint     — ESLint auto-fix
+export const APP_MANIFESTS = [
+  // ... existing entries
+  {
+    serviceKey: "myApp",
+    enhanced: true,
+    type: "system",
+    title: "My App",
+    icon: "fas fa-star",
+    launchType: "instance",
+    windowIdPatterns: ["my-app"],
+    category: "office",
+    clippy: { message: "Your app description here.", animation: ClippyAnimation.Show },
+    description: "Brief description under 15 words for the app guide."
+  }
+];
 ```
 
-**Output:** Single HTML file with all assets inlined (CSS, images as base64, JS minified)
+### 4. Add to AppLoader.js
 
-**Deployment:** Serves from root or `/desktop/` path, no external dependencies except CDN game content
+Add import and entry to `APP_CLASS_MAP` in `src/AppLoader.js`:
+
+```javascript
+import { MyApp } from "./apps/myApp.js";
+
+const APP_CLASS_MAP = {
+  // ... existing entries
+  myApp: MyApp
+};
+```
+
+### 5. Verify Build
+
+Run build to verify:
+
+```bash
+cd webos-desktop && pnpm build:dev
+```
 
 ---
 
-**For detailed integration examples, architecture diagrams, API reference, and troubleshooting, see the source files directly. Each agent is self-contained and documented in its respective file.**
+## Declarative Apps Framework
+
+Apps must define structure declaratively via `getDeclarativeSchema(opts)` instead of imperative code.
+
+```javascript
+getDeclarativeSchema(opts) {
+  return {
+    id: "my-app",
+    name: "My App",
+    icon: "fas fa-star",
+    windows: [{
+      id: "my-app",
+      title: "My App",
+      size: ["400px", "300px"],
+      icon: "fas fa-star",
+      iconColor: "#4f9eff",
+      ui: "<div>App UI</div>",
+      events: {
+        "#my-button": {
+          click: { type: "custom:myAction", stopPropagation: true }
+        }
+      }
+    }],
+    state: {
+      initial: { value: 0 },
+      persistence: "memory"
+    },
+    actions: {
+      myAction: (payload, event, element, state) => {
+        state.value += 1;
+      }
+    },
+    onMount: "initMyApp"
+  };
+}
+```
+
+**Runtime components** (in `src/runtime/`): `StateManager.js`, `AppRenderer.js`, `EventBinder.js`, `ActionExecutor.js`,
+`DeclarativeApp.js`, `UIComponents.js`, `ServiceActions.js`, `AppSchema.js` (re-exports `PersistenceTypes` from
+`src/AppSchema.js`).
+
+---
+
+## Keybind System
+
+### KeybindManager (`src/keybindManager.js`)
+
+Central registry of all keyboard shortcuts with customization and persistence. Always use instead of raw keydown
+listeners.
+
+| Method                         | Description                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------ |
+| `getAll()`                     | All keybinds with current (possibly customized) keys (includes custom actions) |
+| `getById(id)`                  | Single keybind definition by ID (checks custom actions too)                    |
+| `getCurrentKeys(id)`           | Current key combo for a given ID                                               |
+| `setKeys(id, keys)`            | Customize a keybind (`keys` is array like `["Ctrl", "K"]`)                     |
+| `reset(id)` / `resetAll()`     | Reset single or all keybinds to defaults                                       |
+| `matches(event, id)`           | Check if a `KeyboardEvent` matches a keybind's current combo                   |
+| `isCustomized(id)`             | Whether a keybind has been modified                                            |
+| `saveCustomAction(definition)` | Create/update a custom action; auto-assigns ID if missing; returns ID          |
+| `deleteCustomAction(id)`       | Remove a custom action                                                         |
+| `getAllCustomActions()`        | Get array of all custom action definitions                                     |
+| `getCustomAction(id)`          | Get a single custom action by ID                                               |
+| `executeCustomAction(id)`      | Execute a custom action by its ID                                              |
+
+**Key Pattern:** `scope.action` - e.g. `global.showDesktop`, `notepad.save`, `browser.newTab`.
+
+**Usage in handlers:**
+
+```javascript
+import { KeybindManager } from "../keybindManager.js";
+
+// Instead of: if (e.ctrlKey && e.key === "s") { save(); }
+if (KeybindManager.matches(e, "notepad.save")) {
+  e.preventDefault();
+  save();
+}
+```
+
+**Adding new keybinds:** Add an entry to `KEYBIND_DEFINITIONS` in `keybindManager.js` with an `id`, `defaultKeys`
+(array), `desc`, `cat`, and `icon`. Then use `KeybindManager.matches(event, id)` in your handler.
+
+### Shortcuts App (`src/apps/shortcuts.js`)
+
+Opened from Start Menu. Users can search, filter by category, click a key combo to rebind it, reset individual
+shortcuts, or reset all. Customizations persist via `os.storage`.
+
+### Custom Actions
+
+Users can create custom keyboard shortcuts with custom actions. Custom actions support four types:
+
+- **Launch App** - Launches any registered app by its ID (e.g. `terminal`, `calculator`)
+- **Open URL** - Opens a URL in a new browser tab
+- **Run Code** - Executes JavaScript code with the `os` object available (`new Function("os", code)(os)`)
+- **Notify** - Sends a system notification with a title and message
+
+Custom actions are defined in the Shortcuts app via the "Custom" button. Each custom action:
+
+1. Gets a unique ID (prefixed `custom_`)
+2. Stores its keybind + action definition in `os.storage`
+3. Appears under the "Custom" category in the Shortcuts app sidebar
+4. Is executed by a global `keydown` listener installed automatically on creation
+
+**Definition schema:**
+
+```javascript
+{
+  id: "custom_1719000000_abcd",       // auto-generated if omitted
+  defaultKeys: ["Ctrl", "Shift", "A"], // the key combination
+  desc: "My custom shortcut",          // user-facing description
+  icon: "fas fa-rocket",               // auto-set based on action type
+  cat: "custom",                       // always "custom"
+  action: {
+    type: "launchApp",                 // "launchApp" | "openUrl" | "runCode" | "notify"
+    config: { appId: "terminal" }      // varies by type
+  }
+}
+```

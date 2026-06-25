@@ -1,18 +1,132 @@
 import { FileKind } from "./fs.js";
-import { resolveIconUrl } from "./assetUrl.js";
-import { customAlert } from "./shared/dialogs.js";
+import { os } from "./os/index.js";
 import { WindowHelper } from "./utils/WindowHelper.js";
+import { StorageKeys } from "./StorageKeys.js";
+import { ROM_EXTS } from "./shared/coreMap.js";
+import { resolveIconUrl } from "./shared/assetResolver.js";
+import { formatSize } from "./utils/utils.js";
 
-export const IMAGE_EXTS = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "avif", "ico"];
-export const VIDEO_EXTS = ["mp4", "webm", "ogv", "mov", "mkv", "avi", "m4v", "wmv", "flv"];
-export const AUDIO_EXTS = ["mp3", "ogg", "wav", "flac", "aac", "m4a", "opus", "wma"];
-export const OFFICE_EXTS = ["docx", "doc", "xlsx", "xls", "slx", "csv", "odt", "ods", "pdf", "odp", "pptx", "ppt"];
-export const ZIP_EXTS = ["zip", "gz", "tgz", "tar", "rar", "7z", "bz2", "xz"];
+const RECENT_FILES_MAX = 20;
+
+export function trackRecentFile(name, path) {
+  try {
+    const recent = os.storage.get(StorageKeys.recentFiles) || [];
+    const key = Array.isArray(path) ? path.join("/") : path;
+    const existing = recent.findIndex((f) => f.name === name && f.path === key);
+    if (existing !== -1) recent.splice(existing, 1);
+    recent.unshift({ name, path: key, kind: fileKindFromName(name), timestamp: Date.now() });
+    if (recent.length > RECENT_FILES_MAX) recent.length = RECENT_FILES_MAX;
+    os.storage.set(StorageKeys.recentFiles, recent);
+  } catch (e) {
+    console.error("[FileDisplay] trackRecentFile error:", e);
+  }
+}
+
+export const IMAGE_EXTS = [
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+  "bmp",
+  "svg",
+  "avif",
+  "ico",
+  "heic",
+  "heif",
+  "tiff",
+  "tif",
+  "raw",
+  "cr2",
+  "nef",
+  "dng",
+  "arw",
+  "psd",
+  "ai",
+  "eps"
+];
+export const VIDEO_EXTS = [
+  "mp4",
+  "webm",
+  "ogv",
+  "mov",
+  "mkv",
+  "avi",
+  "m4v",
+  "wmv",
+  "flv",
+  "hevc",
+  "mpg",
+  "mpeg",
+  "m2ts",
+  "ts",
+  "3gp",
+  "asf"
+];
+export const AUDIO_EXTS = [
+  "mp3",
+  "ogg",
+  "wav",
+  "flac",
+  "aac",
+  "m4a",
+  "opus",
+  "wma",
+  "alac",
+  "mid",
+  "midi",
+  "aiff",
+  "caf"
+];
+export const OFFICE_EXTS = [
+  "docx",
+  "doc",
+  "xlsx",
+  "xls",
+  "sldx",
+  "csv",
+  "odt",
+  "ods",
+  "pdf",
+  "odp",
+  "pptx",
+  "ppt",
+  "odg",
+  "ott",
+  "ots",
+  "otp",
+  "vsd",
+  "vsdx",
+  "pub",
+  "xps",
+  "wpd",
+  "rtfx"
+];
+export const ZIP_EXTS = [
+  "zip",
+  "gz",
+  "tgz",
+  "tar",
+  "rar",
+  "7z",
+  "bz2",
+  "xz",
+  "lz",
+  "lzma",
+  "zst",
+  "cab",
+  "iso",
+  "dmg",
+  "pak"
+];
 export const EXE_EXTS = ["exe", "msi", "com", "bat", "cmd", "jsdos"];
 export const SWF_EXTS = ["swf"];
+export const MODEL3D_EXTS = ["obj", "gltf", "glb", "fbx", "dae", "3ds", "usdz", "stl", "ply", "x", "blend"];
 
-import { ROM_EXTS } from "./shared/coreMap.js";
-export { ROM_EXTS };
+export const EBOOK_EXTS = ["epub", "mobi", "azw", "azw3", "fb2"];
+export const FONT_EXTS = ["ttf", "otf", "woff", "woff2"];
+export const DISK_EXTS = ["vhd", "vhdx", "vmdk", "img", "qcow2"];
+export const SHORTCUT_EXTS = ["torrent", "url", "webloc", "lnk", "desktop"];
 
 export const HTML_EXTS = ["html", "htm", "xhtml"];
 export const MARKDOWN_EXTS = ["md", "markdown"];
@@ -47,7 +161,22 @@ export const TEXT_EXTS = [
   "hpp",
   "go",
   "rs",
-  "php"
+  "php",
+  "scala",
+  "sc",
+  "lua",
+  "elm",
+  "nim",
+  "asm",
+  "v",
+  "zig",
+  "astro",
+  "solid",
+  "mdx",
+  "jsonc",
+  "toml",
+  "conf",
+  "config"
 ];
 
 const BINARY_OFFICE_EXTS = ["pdf", "docx", "xlsx", "xls", "pptx", "ppt"];
@@ -63,7 +192,14 @@ const VIDEO_MIME_MAP = {
   avi: "video/x-msvideo",
   m4v: "video/x-m4v",
   wmv: "video/x-ms-wmv",
-  flv: "video/x-flv"
+  flv: "video/x-flv",
+  hevc: "video/hevc",
+  mpg: "video/mpeg",
+  mpeg: "video/mpeg",
+  m2ts: "video/mp2t",
+  ts: "video/mp2t",
+  "3gp": "video/3gpp",
+  asf: "video/x-ms-asf"
 };
 
 export function getExt(name) {
@@ -78,6 +214,10 @@ export function fileKindFromName(name) {
   if (ROM_EXTS.includes(ext)) return FileKind.ROM;
   if (SWF_EXTS.includes(ext)) return FileKind.OTHER;
   if (ZIP_EXTS.includes(ext)) return FileKind.OTHER;
+  if (EBOOK_EXTS.includes(ext)) return FileKind.OTHER;
+  if (FONT_EXTS.includes(ext)) return FileKind.OTHER;
+  if (DISK_EXTS.includes(ext)) return FileKind.OTHER;
+  if (SHORTCUT_EXTS.includes(ext)) return FileKind.OTHER;
   if (HTML_EXTS.includes(ext)) return FileKind.HTML ?? FileKind.TEXT;
   if (MARKDOWN_EXTS.includes(ext)) return FileKind.TEXT;
   if (TEXT_EXTS.includes(ext)) return FileKind.TEXT;
@@ -114,8 +254,23 @@ export function isExeFile(name) {
 export function isSwfFile(name) {
   return SWF_EXTS.includes(getExt(name));
 }
+export function isModel3DFile(name) {
+  return MODEL3D_EXTS.includes(getExt(name));
+}
 export function isBinaryOfficeFile(name) {
   return BINARY_OFFICE_EXTS.includes(getExt(name));
+}
+export function isEbookFile(name) {
+  return EBOOK_EXTS.includes(getExt(name));
+}
+export function isFontFile(name) {
+  return FONT_EXTS.includes(getExt(name));
+}
+export function isDiskFile(name) {
+  return DISK_EXTS.includes(getExt(name));
+}
+export function isShortcutFile(name) {
+  return SHORTCUT_EXTS.includes(getExt(name));
 }
 export function isMediaFile(name) {
   return isImageFile(name) || isVideoFile(name);
@@ -165,7 +320,21 @@ export function isCodeFile(name) {
     "dockerfile",
     "makefile",
     "yml",
-    "yaml"
+    "yaml",
+    "scala",
+    "sc",
+    "lua",
+    "elm",
+    "nim",
+    "asm",
+    "v",
+    "zig",
+    "astro",
+    "solid",
+    "mdx",
+    "jsonc",
+    "conf",
+    "config"
   ].includes(getExt(name));
 }
 export function isWallpaperPath(path) {
@@ -183,9 +352,14 @@ export function resolveFileIcon(name) {
   if (isAudioFile(name)) return resolveIconUrl("static/icons/spot.webp");
   if (isRomFile(name)) return "rom";
   if (isSwfFile(name)) return resolveIconUrl("static/icons/flash.webp");
+  if (isModel3DFile(name)) return resolveIconUrl("static/icons/3dmodel.webp");
   if (isZipFile(name)) return resolveIconUrl("static/icons/zip.webp");
   if (isExeFile(name)) return resolveIconUrl("static/icons/jsdos.webp");
   if (isOfficeFile(name)) return resolveIconUrl("static/icons/office.webp");
+  if (isEbookFile(name)) return resolveIconUrl("static/icons/office.webp");
+  if (isFontFile(name)) return resolveIconUrl("static/icons/office.webp");
+  if (isDiskFile(name)) return resolveIconUrl("static/icons/zip.webp");
+  if (isShortcutFile(name)) return resolveIconUrl("static/icons/notepad.webp");
   if (isHtmlFile(name)) return resolveIconUrl("static/icons/firefox.webp");
   if (isJsonFile(name)) return resolveIconUrl("static/icons/json.webp");
   return resolveIconUrl("static/icons/notepad.webp");
@@ -216,11 +390,13 @@ export function buildFileIconHTML(name, { thumbnailSrc = null, size = 64, radius
   if (iconSource && typeof iconSource === "string" && (iconSource.startsWith("fa") || iconSource.includes(" fa-"))) {
     return `<div style="${s}display:flex;align-items:center;justify-content:center;font-size:${Math.round(
       size * 0.44
-    )}px;color:#8090ff;background:rgba(128,144,255,0.15);border:1px solid rgba(128,144,255,0.2);"><i class="${iconSource}"></i></div>`;
+    )}px;color:var(--brand);background:var(--brand-dim);border:1px solid var(--glass-border);"><i class="${iconSource}"></i></div>`;
   }
 
   if (isHtmlFile(name)) {
-    return `<img src="${resolveIconUrl("static/icons/firefox.webp")}" style="${s}object-fit:cover;">`;
+    return `<div style="${s}display:flex;align-items:center;justify-content:center;font-size:${Math.round(
+      size * 0.5
+    )}px;color:#519aba;background:#1e1e1e;border:1px solid #333;"><i class="fas fa-snowflake"></i></div>`;
   }
   if (isMarkdownFile(name)) {
     return `<div style="${s}display:flex;align-items:center;justify-content:center;font-size:${Math.round(
@@ -230,10 +406,13 @@ export function buildFileIconHTML(name, { thumbnailSrc = null, size = 64, radius
   if (isRomFile(name)) {
     return `<div style="${s}display:flex;align-items:center;justify-content:center;font-size:${Math.round(
       size * 0.44
-    )}px;color:#6677dd;"><i class="fas fa-gamepad"></i></div>`;
+    )}px;color:var(--brand);"><i class="fas fa-gamepad"></i></div>`;
   }
   if (isSwfFile(name)) {
     return `<img src="${resolveIconUrl("static/icons/flash.webp")}" style="${s}object-fit:cover;">`;
+  }
+  if (isModel3DFile(name)) {
+    return `<img src="${resolveIconUrl("static/icons/3dmodel.webp")}" style="${s}object-fit:cover;">`;
   }
   if (isZipFile(name)) {
     return `<img src="${resolveIconUrl("static/icons/zip.webp")}" style="${s}object-fit:cover;">`;
@@ -263,8 +442,28 @@ export function buildFileIconHTML(name, { thumbnailSrc = null, size = 64, radius
   if (isOfficeFile(name)) {
     return `<img src="${resolveIconUrl("static/icons/office.webp")}" style="${s}object-fit:cover;">`;
   }
+  if (isEbookFile(name)) {
+    return `<div style="${s}display:flex;align-items:center;justify-content:center;font-size:${Math.round(
+      size * 0.44
+    )}px;color:#ff6b6b;background:#1e1e1e;border:1px solid #333;"><i class="fas fa-book"></i></div>`;
+  }
+  if (isFontFile(name)) {
+    return `<div style="${s}display:flex;align-items:center;justify-content:center;font-size:${Math.round(
+      size * 0.44
+    )}px;color:#4ecdc4;background:#1e1e1e;border:1px solid #333;"><i class="fas fa-font"></i></div>`;
+  }
+  if (isDiskFile(name)) {
+    return `<div style="${s}display:flex;align-items:center;justify-content:center;font-size:${Math.round(
+      size * 0.44
+    )}px;color:#f39c12;background:#1e1e1e;border:1px solid #333;"><i class="fas fa-hdd"></i></div>`;
+  }
   if (storedIcon && storedIcon !== "@content" && storedIcon !== "rom") {
     return `<img src="${resolveIconUrl(storedIcon)}" style="${s}object-fit:cover;">`;
+  }
+  if (isShortcutFile(name)) {
+    return `<div style="${s}display:flex;align-items:center;justify-content:center;font-size:${Math.round(
+      size * 0.44
+    )}px;color:#9b59b6;background:#1e1e1e;border:1px solid #333;"><i class="fas fa-link"></i></div>`;
   }
   return `<img src="${resolveIconUrl("static/icons/notepad.webp")}" style="${s}object-fit:cover;">`;
 }
@@ -278,9 +477,9 @@ export function openMediaViewer(name, src, kind, windowManager) {
 
   let media;
   if (isVideo) {
-    media = `<video src="${src}" controls autoplay loop style="max-width:100%;max-height:100%"></video>`;
+    media = `<video src="${src}" crossorigin="anonymous" controls autoplay loop style="max-width:100%;max-height:100%"></video>`;
   } else if (isAudio) {
-    media = `<audio src="${src}" controls autoplay style="width:90%"></audio>`;
+    media = `<audio src="${src}" crossorigin="anonymous" controls autoplay style="width:90%"></audio>`;
   } else {
     media = `<img src="${src}" style="max-width:100%;max-height:100%">`;
   }
@@ -312,7 +511,12 @@ function audioExtToMime(name) {
     aac: "audio/aac",
     m4a: "audio/mp4",
     opus: "audio/opus",
-    wma: "audio/x-ms-wma"
+    wma: "audio/x-ms-wma",
+    alac: "audio/alac",
+    mid: "audio/midi",
+    midi: "audio/midi",
+    aiff: "audio/aiff",
+    caf: "audio/x-caf"
   };
   return map[getExt(name)] ?? "audio/octet-stream";
 }
@@ -333,33 +537,60 @@ function getContentSize(content) {
 
 async function confirmLargeFile(name, size) {
   const sizeStr = formatFileSize(size);
-  return confirm(
-    `The file "${name}" is quite large (${sizeStr}).\n\nOpening it in Notepad may cause performance issues.\n\nDo you want to continue?`
+  return os.dialog.confirm(
+    "Large File Warning",
+    `The file "${name}" is quite large (${sizeStr}).\n\nOpening it in Notepad may cause performance issues.\n\nDo you want to continue?`,
+    "Continue",
+    "Cancel"
   );
 }
 
-export async function openFileWith({
-  name,
-  path,
-  fs,
-  notepadApp,
-  browserApp,
-  windowManager,
-  officeApp,
-  markdownApp,
-  jsDosApp,
-  appLauncher
-}) {
-  if (isZipFile(name)) return;
-  console.log("Open file with: ", name, path);
-
-  if (isExeFile(name)) {
-    if (!jsDosApp) return;
-    jsDosApp.launchExe(name, path);
-    return;
+async function _openModelFile(name, path, fs, appLauncher) {
+  try {
+    const model3dApp = appLauncher?.model3dApp;
+    if (model3dApp) {
+      let arrayBuffer = null;
+      try {
+        const blob = await fs.readBinaryFile(path, name);
+        if (blob && blob.size > 0) {
+          arrayBuffer = await blob.arrayBuffer();
+        } else {
+          const content = await fs.getFileContent(path, name);
+          if (content instanceof Blob) {
+            arrayBuffer = await content.arrayBuffer();
+          } else if (content instanceof ArrayBuffer) {
+            arrayBuffer = content;
+          } else if (typeof content === "string") {
+            arrayBuffer = new TextEncoder().encode(content).buffer;
+          }
+        }
+      } catch (e) {
+        console.error("Error loading 3D file content:", e);
+      }
+      model3dApp.open({
+        title: name,
+        filePath: path,
+        fileName: name,
+        fileData: arrayBuffer
+      });
+    } else {
+      os.dialog.alert("Can't Open", "Yuki Blender isn't available right now.");
+    }
+  } catch (err) {
+    console.error("[FileDisplay] _openModelFile error:", err);
   }
+}
 
-  if (isSwfFile(name)) {
+async function _openExecutable(name, path, jsDosApp) {
+  try {
+    jsDosApp.launchExe(name, path);
+  } catch (err) {
+    console.error("[FileDisplay] _openExecutable error:", err);
+  }
+}
+
+async function _openSwfFile(name, path, fs, appLauncher) {
+  try {
     const ruffleApp = appLauncher?.ruffleApp;
     if (!ruffleApp) return;
     let arrayBuffer = null;
@@ -386,20 +617,26 @@ export async function openFileWith({
       .replace(/[-_]/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase());
     ruffleApp._launchRuffle(displayName, name, arrayBuffer);
-    return;
+  } catch (err) {
+    console.error("[FileDisplay] _openSwfFile error:", err);
   }
+}
 
-  if (isRomFile(name)) {
+async function _openRomFile(name, path, appLauncher) {
+  try {
     const emulatorApp = appLauncher?.emulatorApp;
     if (emulatorApp) {
       emulatorApp.launchROM(name, path);
     } else {
-      customAlert("ROM emulation is not available.");
+      os.dialog.alert("Can't Open", "ROM emulation isn't available right now.");
     }
-    return;
+  } catch (err) {
+    console.error("[FileDisplay] _openRomFile error:", err);
   }
+}
 
-  if (isVideoFile(name) || isAudioFile(name) || isImageFile(name)) {
+async function _openMediaFile(name, path, fs, windowManager) {
+  try {
     const ext = getExt(name);
 
     const IMAGE_MIME_MAP = {
@@ -413,7 +650,17 @@ export async function openFileWith({
       avif: "image/avif",
       ico: "image/x-icon",
       tif: "image/tiff",
-      tiff: "image/tiff"
+      tiff: "image/tiff",
+      heic: "image/heic",
+      heif: "image/heif",
+      raw: "image/raw",
+      cr2: "image/x-canon-cr2",
+      nef: "image/x-nikon-nef",
+      dng: "image/x-adobe-dng",
+      arw: "image/x-sony-arw",
+      psd: "image/vnd.adobe.photoshop",
+      ai: "application/postscript",
+      eps: "application/postscript"
     };
 
     const kind = isVideoFile(name) ? FileKind.VIDEO : isAudioFile(name) ? FileKind.AUDIO : FileKind.IMAGE;
@@ -449,10 +696,13 @@ export async function openFileWith({
       }
       openMediaViewer(name, src, kind, windowManager);
     }
-    return;
+  } catch (err) {
+    console.error("[FileDisplay] _openMediaFile error:", err);
   }
+}
 
-  if (isOfficeFile(name)) {
+async function _openOfficeFile(name, path, fs, officeApp, notepadApp) {
+  try {
     if (!officeApp) {
       const content = await fs.getFileContent(path, name);
       notepadApp.open(name, content, path);
@@ -466,33 +716,235 @@ export async function openFileWith({
       }
       return;
     }
+  } catch (err) {
+    console.error("[FileDisplay] _openOfficeFile error:", err);
   }
+}
 
-  const content = await fs.getFileContent(path, name);
-
-  if (isMarkdownFile(name)) {
+async function _openMarkdown(name, path, content, markdownApp, notepadApp) {
+  try {
     if (markdownApp) {
       markdownApp.open(name, content, path);
     } else {
       notepadApp.open(name, content, path);
     }
-    return;
+  } catch (err) {
+    console.error("[FileDisplay] _openMarkdown error:", err);
   }
+}
 
-  if (isHtmlFile(name)) {
+async function _openHtmlFile(name, path, content, browserApp, notepadApp) {
+  try {
     if (browserApp) {
       browserApp.openHtml(content, name, path);
     } else {
       notepadApp.open(name, content, path);
     }
-    return;
+  } catch (err) {
+    console.error("[FileDisplay] _openHtmlFile error:", err);
   }
-  const size = getContentSize(content);
-  if (size > LARGE_FILE_THRESHOLD) {
-    const confirmed = await confirmLargeFile(name, size);
-    if (!confirmed) return;
+}
+
+async function _openTextFile(name, path, content, notepadApp) {
+  try {
+    const size = getContentSize(content);
+    if (size > LARGE_FILE_THRESHOLD) {
+      const confirmed = await confirmLargeFile(name, size);
+      if (!confirmed) return;
+    }
+    notepadApp.open(name, content, path);
+  } catch (err) {
+    console.error("[FileDisplay] _openTextFile error:", err);
   }
-  notepadApp.open(name, content, path);
+}
+
+export async function openFileWith({
+  name,
+  path,
+  fs,
+  notepadApp,
+  browserApp,
+  windowManager,
+  officeApp,
+  markdownApp,
+  jsDosApp,
+  appLauncher
+}) {
+  try {
+    if (isZipFile(name)) return;
+    trackRecentFile(name, path);
+    console.log("Open file with: ", name, path);
+
+    if (isModel3DFile(name)) return _openModelFile(name, path, fs, appLauncher);
+    if (
+      isExeFile(name) ||
+      name.toLowerCase().endsWith(".jsdos") ||
+      name.toLowerCase().endsWith(".com") ||
+      name.toLowerCase().endsWith(".bat")
+    )
+      return _openExecutable(name, path, jsDosApp);
+    if (isSwfFile(name)) return _openSwfFile(name, path, fs, appLauncher);
+    if (isRomFile(name)) return _openRomFile(name, path, appLauncher);
+    if (isVideoFile(name) || isAudioFile(name) || isImageFile(name))
+      return _openMediaFile(name, path, fs, windowManager);
+    if (isOfficeFile(name)) return _openOfficeFile(name, path, fs, officeApp, notepadApp);
+
+    const content = await fs.getFileContent(path, name);
+
+    if (isMarkdownFile(name)) return _openMarkdown(name, path, content, markdownApp, notepadApp);
+    if (isHtmlFile(name)) return _openHtmlFile(name, path, content, browserApp, notepadApp);
+    return _openTextFile(name, path, content, notepadApp);
+  } catch (err) {
+    console.error("[FileDisplay] openFileWith error:", err);
+    os.notify.send("File Display", `Failed to open ${name}`, { type: "error" });
+  }
+}
+
+function _resolveDesktopIconFromDOM(name) {
+  const label = name.replace(/\.desktop$/i, "");
+  const desktop = document.getElementById("desktop");
+  if (!desktop) return null;
+  const iconEl = desktop.querySelector(
+    `.icon.selectable[data-file-name="${CSS.escape(name)}"], .icon.selectable[data-folder-name="${CSS.escape(name)}"]`
+  );
+  if (iconEl) {
+    const img = iconEl.querySelector("img");
+    if (img) return img.getAttribute("src") || null;
+    const faIcon = iconEl.querySelector("i");
+    if (faIcon) return faIcon.className;
+    return null;
+  }
+  const labelIcon = Array.from(desktop.querySelectorAll(".icon.selectable")).find(
+    (el) => el.querySelector("div, span")?.textContent?.trim() === label
+  );
+  if (labelIcon) {
+    const img = labelIcon.querySelector("img");
+    if (img) return img.getAttribute("src") || null;
+    const faIcon = labelIcon.querySelector("i");
+    if (faIcon) return faIcon.className;
+  }
+  return null;
+}
+
+function _stripext(name) {
+  return SHORTCUT_EXTS.some((ext) => name.toLowerCase().endsWith(`.${ext}`))
+    ? name.slice(0, name.lastIndexOf("."))
+    : name;
+}
+
+export async function showFileProperties(path, name, isFolder, onRename = null) {
+  const { os } = await import("./os/index.js");
+  try {
+    const displayLabel = isFolder ? name : _stripext(name);
+    const iconSrc = isFolder ? "static/icons/file.webp" : _resolveDesktopIconFromDOM(name) || resolveFileIcon(name);
+    const size = isFolder ? "--" : await _getItemSize(path);
+    let type = isFolder ? "Folder" : fileKindFromName(name);
+    const { FileKind } = await import("./fs.js");
+    if (typeof type !== "string") {
+      type =
+        type === FileKind.TEXT
+          ? "Text"
+          : type === FileKind.IMAGE
+            ? "Image"
+            : type === FileKind.VIDEO
+              ? "Video"
+              : type === FileKind.AUDIO
+                ? "Audio"
+                : type === FileKind.ROM
+                  ? "ROM"
+                  : type === FileKind.HTML
+                    ? "HTML"
+                    : "File";
+    }
+    if (type === "other" && isShortcutFile(name)) type = "Shortcut";
+    const location = Array.isArray(path) ? path.join("/") : path;
+    const modified = await _getModifiedDate(path);
+
+    const title = `Properties: ${displayLabel}`;
+    const propsWin = os.window.create(`${Date.now()}-props`, title, "400px", "auto");
+
+    propsWin.innerHTML = `
+      <div class="window-header"><span>${title}</span>
+        ${os.window.getWindowControls()}
+      </div>
+      <div class="window-content" style="padding:20px;">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+          <img src="${iconSrc}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
+          <div style="flex:1;">
+            <input id="props-rename-input" type="text" value="${displayLabel}" style="font-size:18px;font-weight:600;padding:4px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:inherit;width:100%;">
+            <div style="opacity:0.7;font-size:13px;margin-top:4px;">${type}</div>
+          </div>
+        </div>
+
+        <div style="border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:16px;"></div>
+
+        <div style="margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;opacity:0.9;">Details</div>
+          <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;font-size:13px;">
+            <div style="opacity:0.7;">Type:</div><div>${type}</div>
+            <div style="opacity:0.7;">Location:</div><div>${location}</div>
+            <div style="opacity:0.7;">Size:</div><div>${size}</div>
+            <div style="opacity:0.7;">Modified:</div><div>${modified}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const renameInput = propsWin.querySelector("#props-rename-input");
+
+    renameInput.onkeydown = async (e) => {
+      if (e.key === "Enter") {
+        const newName = renameInput.value.trim();
+        const shortcutExt = SHORTCUT_EXTS.find((e) => name.toLowerCase().endsWith(`.${e}`));
+        const targetName = shortcutExt ? `${newName}.${shortcutExt}` : newName;
+        if (!newName || targetName === name) return;
+
+        try {
+          await os.fs.rename(path.slice(0, -1), name, targetName);
+          os.notify.send(`Renamed to "${newName}"`);
+          os.window.close(propsWin);
+          if (onRename) onRename();
+        } catch (err) {
+          os.dialog.alert("Error", err.message || "Failed to rename");
+        }
+      }
+    };
+  } catch (err) {
+    console.error("Properties error:", err);
+    os.dialog.alert("Error", "Failed to show properties");
+  }
+}
+
+async function _getItemSize(path) {
+  const { os } = await import("./os/index.js");
+  try {
+    const pathStr = Array.isArray(path) ? path.join("/") : path;
+    const dirPath = pathStr.substring(0, pathStr.lastIndexOf("/")) || "";
+    const fileName = pathStr.substring(pathStr.lastIndexOf("/") + 1);
+
+    const meta = await os.fs.getMetadata(dirPath, fileName);
+    if (meta.size !== undefined && meta.size !== null) {
+      return formatSize(meta.size);
+    }
+
+    const text = await os.fs.read(path);
+    if (typeof text === "string" && text) {
+      return formatSize(new Blob([text]).size);
+    }
+    const content = await os.fs.read(path, { encoding: "binary" });
+    const bytes = content instanceof Uint8Array ? content.length : new Blob([content]).size;
+    return formatSize(bytes);
+  } catch {
+    return "Unknown";
+  }
+}
+
+async function _getModifiedDate(path) {
+  try {
+    return new Date().toLocaleString();
+  } catch {
+    return "Unknown";
+  }
 }
 
 export function decodeDataURLContent(content) {
@@ -508,4 +960,39 @@ export function decodeDataURLContent(content) {
     }
   }
   return content;
+}
+
+export function generateThumbnail(src, maxDimension = 128) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const { width, height } = img;
+      if (width <= maxDimension && height <= maxDimension) {
+        resolve(src);
+        return;
+      }
+      try {
+        const scale = Math.min(maxDimension / width, maxDimension / height);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(width * scale);
+        canvas.height = Math.round(height * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      } catch {
+        resolve(src);
+      }
+    };
+    img.onerror = () => resolve(src);
+    if (src instanceof Blob) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve(src);
+      reader.readAsDataURL(src);
+    } else {
+      img.src = src;
+    }
+  });
 }

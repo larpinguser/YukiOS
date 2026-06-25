@@ -1,6 +1,10 @@
-import { isImageFile } from "./utils.js";
-import { StorageKeys } from "./settings.js";
+import interact from "interactjs";
+import { isImageFile } from "./fileDisplay.js";
+import { appMap } from "./games/gamesList.js";
+import { audioMixer, SystemAudio } from "./audioMixer.js";
+import { getSetting } from "./shared/settingsUtils.js";
 
+import { APP_MANIFESTS, StorageKeys, os } from "./framework.js";
 function escapeHtml(str) {
   if (typeof str !== "string") return "";
   return str
@@ -10,6 +14,20 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+
+const APP_SOURCE_TO_APP_MAP_KEY = APP_MANIFESTS.reduce(
+  (acc, manifest) => {
+    acc[manifest.title] = manifest.serviceKey;
+    return acc;
+  },
+  {
+    V86App: "v86app",
+    JsDosApp: "jsDosApp",
+    RuffleApp: "ruffleApp",
+    MonacoApp: "monaco",
+    Accounts: "accountManager"
+  }
+);
 
 export class NotificationCenter {
   constructor() {
@@ -22,6 +40,29 @@ export class NotificationCenter {
     this.createNotificationCenterUI();
     this.setupTaskbarButton();
     this.updateDoNotDisturbUI();
+  }
+
+  _getSetting(key, defaultValue) {
+    return getSetting(key, defaultValue);
+  }
+
+  _applyNotificationPosition(container) {
+    const position = this._getSetting("notificationsPosition", "bottom-right");
+    container.className = "ntf-toast-container";
+
+    switch (position) {
+      case "bottom-left":
+        container.classList.add("ntf-toast-container--bottom-left");
+        break;
+      case "top-right":
+        container.classList.add("ntf-toast-container--top-right");
+        break;
+      case "top-left":
+        container.classList.add("ntf-toast-container--top-left");
+        break;
+      default:
+        container.classList.add("ntf-toast-container--bottom-right");
+    }
   }
 
   createNotificationCenterUI() {
@@ -79,14 +120,32 @@ export class NotificationCenter {
     systemTray.insertBefore(notificationBtn, systemTray.lastChild);
   }
 
-  addNotification(title, message, type = "info", duration = 5000, icon = null) {
+  addNotification(title, message, type = "info", duration = 5000, icon = null, appSource = null) {
+    const enabled = this._getSetting("notificationsEnabled", true);
+    if (!enabled) return null;
+
+    if (!icon && appSource) {
+      const appMapKey = APP_SOURCE_TO_APP_MAP_KEY[appSource];
+      if (appMapKey && appMap[appMapKey]) {
+        icon = appMap[appMapKey].icon;
+      } else {
+        for (const [key, app] of Object.entries(appMap)) {
+          if (app.title === appSource) {
+            icon = app.icon;
+            break;
+          }
+        }
+      }
+    }
+
     const notification = {
       id: this.notificationId++,
       title,
       message,
       type,
       timestamp: new Date(),
-      icon
+      icon,
+      appSource
     };
 
     if (this.doNotDisturb) {
@@ -107,12 +166,26 @@ export class NotificationCenter {
   showToast(notif) {
     if (this.doNotDisturb) return;
 
+    if (notif.type === "warning") {
+      audioMixer().playSystemSound(SystemAudio.WARNING);
+    }
+
     let container = document.getElementById("ntf-toast-container");
     if (!container) {
       container = document.createElement("div");
       container.id = "ntf-toast-container";
       container.className = "ntf-toast-container";
+      this._applyNotificationPosition(container);
       document.body.appendChild(container);
+    } else {
+      this._applyNotificationPosition(container);
+    }
+
+    while (container.children.length >= 4) {
+      const oldest = container.firstChild;
+      if (oldest) {
+        oldest.remove();
+      }
     }
 
     const toast = document.createElement("div");
@@ -122,7 +195,8 @@ export class NotificationCenter {
       warning: "ntf-toast--warn",
       error: "ntf-toast--fail"
     };
-    toast.className = `ntf-toast ${typeMap[notif.type] || "ntf-toast--info"}`;
+    const showAnim = this._getSetting("notificationsPopAnimation", true);
+    toast.className = `ntf-toast ${typeMap[notif.type] || "ntf-toast--info"}${showAnim ? "" : " ntf-toast--no-animation"}`;
 
     let iconHtml = "";
     if (notif.icon) {
@@ -132,7 +206,12 @@ export class NotificationCenter {
       if (isImagePath || isDataUrl) {
         iconHtml = `<img src="${escapeHtml(notif.icon)}" class="ntf-toast__glyph" style="width:16px;height:16px;object-fit:cover;" />`;
       } else if (typeof notif.icon === "string" && notif.icon.trim().length > 0) {
-        const cls = notif.icon.startsWith("fa") ? notif.icon : `fa ${notif.icon}`;
+        let cls = notif.icon;
+        if (cls.startsWith("fa-") && !cls.startsWith("fas ") && !cls.startsWith("far ") && !cls.startsWith("fab ")) {
+          cls = `fas ${cls}`;
+        } else if (!cls.startsWith("fa")) {
+          cls = `fa ${cls}`;
+        }
         iconHtml = `<i class="${escapeHtml(cls)} ntf-toast__glyph"></i>`;
       }
     } else {
@@ -148,24 +227,98 @@ export class NotificationCenter {
     toast.innerHTML = `
       <div class="ntf-toast__glyph-wrap">${iconHtml}</div>
       <div class="ntf-toast__body">
+        ${notif.appSource ? `<div class="ntf-toast__source">${escapeHtml(notif.appSource)}</div>` : ""}
         <div class="ntf-toast__heading">${escapeHtml(notif.title)}</div>
         <div class="ntf-toast__text">${escapeHtml(notif.message ?? "")}</div>
       </div>
       <button class="ntf-toast__close" title="Dismiss">×</button>
+      <div class="ntf-toast__progress"></div>
     `;
 
     container.appendChild(toast);
 
     let removed = false;
+    let dismissTimer = null;
+    let dragHistory = [];
+
+    const threshold = toast.offsetWidth * 0.3;
+
     const removeToast = () => {
       if (removed) return;
       removed = true;
+      interact(toast).unset();
       toast.classList.add("ntf-toast-out");
       setTimeout(() => toast.remove(), 300);
     };
 
     toast.querySelector(".ntf-toast__close").addEventListener("click", removeToast);
-    setTimeout(removeToast, 4000);
+
+    const removeTimeout = this._getSetting("notificationsRemoveTimeout", true);
+    if (removeTimeout) {
+      const durationSec = this._getSetting("notificationsDuration", 5);
+      const progressBar = toast.querySelector(".ntf-toast__progress");
+      if (progressBar) {
+        progressBar.style.animation = `toastProgress ${durationSec}s linear forwards`;
+      }
+      dismissTimer = setTimeout(removeToast, durationSec * 1000);
+    }
+
+    const self = this;
+    interact(toast).draggable({
+      ignoreFrom: ".ntf-toast__close",
+      axis: "x",
+      inertia: false,
+      listeners: {
+        start() {
+          dragHistory = [];
+          toast.classList.add("ntf-toast--dragging");
+          if (dismissTimer) {
+            clearTimeout(dismissTimer);
+            dismissTimer = null;
+          }
+        },
+        move(event) {
+          const dx = event.clientX - event.interaction.startPointer.clientX;
+          toast.style.transform = `translateX(${dx}px)`;
+          toast.style.opacity = Math.abs(dx) > threshold ? "0.5" : "1";
+          dragHistory.push({ x: event.clientX, t: performance.now() });
+          if (dragHistory.length > 5) dragHistory.shift();
+        },
+        end(event) {
+          const dx = event.clientX - event.interaction.startPointer.clientX;
+
+          let velocity = 0;
+          if (dragHistory.length >= 2) {
+            const first = dragHistory[0];
+            const last = dragHistory[dragHistory.length - 1];
+            const dt = last.t - first.t;
+            if (dt > 0) {
+              velocity = (last.x - first.x) / dt;
+            }
+          }
+          dragHistory = [];
+
+          if (Math.abs(dx) > threshold || Math.abs(velocity) > 0.3) {
+            self.removeNotification(notif.id);
+            const flyDir = Math.abs(dx) > threshold ? Math.sign(dx) : Math.sign(velocity);
+            const extra = Math.max(Math.abs(velocity) * 500, 0);
+            toast.style.transition = "transform 0.4s cubic-bezier(0.15, 0.7, 0.3, 1), opacity 0.4s ease";
+            toast.style.transform = `translateX(${flyDir * (Math.abs(dx) + extra + window.innerWidth)}px)`;
+            toast.style.opacity = "0";
+            setTimeout(() => {
+              removed = true;
+              interact(toast).unset();
+              toast.remove();
+            }, 450);
+          } else {
+            toast.classList.remove("ntf-toast--dragging");
+            toast.style.transition = "none";
+            toast.style.transform = "translateX(0px)";
+            toast.style.opacity = "1";
+          }
+        }
+      }
+    });
   }
 
   removeNotification(id) {
@@ -221,7 +374,12 @@ export class NotificationCenter {
         if (isImagePath || isDataUrl) {
           iconHtml = `<img src="${escapeHtml(notif.icon)}" class="ntf-card__glyph" />`;
         } else if (typeof notif.icon === "string" && notif.icon.trim().length > 0) {
-          const cls = notif.icon.startsWith("fa") ? notif.icon : `fa ${notif.icon}`;
+          let cls = notif.icon;
+          if (cls.startsWith("fa-") && !cls.startsWith("fas ") && !cls.startsWith("far ") && !cls.startsWith("fab ")) {
+            cls = `fas ${cls}`;
+          } else if (!cls.startsWith("fa")) {
+            cls = `fa ${cls}`;
+          }
           iconHtml = `<i class="${escapeHtml(cls)} ntf-card__glyph"></i>`;
         }
       } else {
@@ -239,6 +397,7 @@ export class NotificationCenter {
           ${iconHtml}
         </div>
         <div class="ntf-card__body">
+          ${notif.appSource ? `<div class="ntf-card__source">${escapeHtml(notif.appSource)}</div>` : ""}
           <div class="ntf-card__heading">${escapeHtml(notif.title)}</div>
           <div class="ntf-card__text">${escapeHtml(notif.message ?? "")}</div>
           <div class="ntf-card__stamp">${timestamp}</div>
@@ -284,7 +443,9 @@ export class NotificationCenter {
     const center = document.getElementById("ntf-panel");
     if (!center) return;
 
-    center.style.display = "block";
+    center.style.display = "flex";
+    center.offsetHeight;
+    center.classList.add("open");
     this.isOpen = true;
 
     const btn = document.getElementById("ntf-tray-btn");
@@ -295,7 +456,12 @@ export class NotificationCenter {
     const center = document.getElementById("ntf-panel");
     if (!center) return;
 
-    center.style.display = "none";
+    center.classList.remove("open");
+    setTimeout(() => {
+      if (!this.isOpen) {
+        center.style.display = "none";
+      }
+    }, 300);
     this.isOpen = false;
 
     const btn = document.getElementById("ntf-tray-btn");
@@ -305,7 +471,7 @@ export class NotificationCenter {
   setDoNotDisturb(enabled) {
     this.doNotDisturb = Boolean(enabled);
     try {
-      localStorage.setItem(StorageKeys.dndKey, this.doNotDisturb ? "1" : "0");
+      os.storage.set(StorageKeys.dndKey, this.doNotDisturb ? "1" : "0");
     } catch {}
 
     if (!this.doNotDisturb && this.snoozedNotifications.length > 0) {
@@ -323,7 +489,7 @@ export class NotificationCenter {
 
   _loadDoNotDisturb() {
     try {
-      return localStorage.getItem(StorageKeys.dndKey) === "1";
+      return os.storage.get(StorageKeys.dndKey) === "1";
     } catch {
       return false;
     }

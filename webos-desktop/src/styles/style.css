@@ -1,0 +1,1755 @@
+:root {
+  --taskbar-h: 3.2em;
+  --taskbar-v-w: 3.2em;
+  --taskbar-padding-top: 0;
+  --taskbar-padding-bottom: var(--taskbar-h);
+  --taskbar-padding-left: 0;
+  --taskbar-padding-right: 0;
+
+  --font-size-scale: 1;
+  --gui-scale: 1;
+  --spacing-scale: 1;
+  --taskbar-scale: 1;
+
+  --spacing-xxs: calc(2px * var(--spacing-scale));
+  --spacing-xs: calc(4px * var(--spacing-scale));
+  --spacing-sm: calc(8px * var(--spacing-scale));
+  --spacing-md: calc(12px * var(--spacing-scale));
+  --spacing-lg: calc(16px * var(--spacing-scale));
+  --spacing-xl: calc(20px * var(--spacing-scale));
+  --spacing-2xl: calc(24px * var(--spacing-scale));
+
+  --font-ui: "Poppins", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --font-serif: Georgia, serif;
+
+  --brand: oklch(55% 0.11 264);
+  --brand-hover: oklch(48% 0.11 264);
+  --brand-dark: oklch(38% 0.11 264);
+  --brand-glow: oklch(55% 0.08 264 / 0.18);
+  --brand-dim: oklch(55% 0.11 264 / 0.12);
+
+  --r-xxs: 2px;
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r: 10px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-2xl: 20px;
+  --r-full: 999px;
+
+  --bg-base: oklch(12% 0.02 265);
+  --bg-elev-1: oklch(18% 0.01 265);
+  --bg-elev-2: oklch(24% 0.01 265);
+  --bg-elev-3: oklch(30% 0.01 265);
+
+  --surface-solid: oklch(18% 0.01 265);
+  --surface-hover: oklch(26% 0.01 265);
+
+  --glass: oklch(100% 0 0 / 0.04);
+  --glass-strong: oklch(100% 0 0 / 0.07);
+  --glass-border: oklch(100% 0 0 / 0.08);
+
+  --text-primary: oklch(95% 0.01 265);
+  --text-secondary: oklch(72% 0.01 265);
+  --text-muted: oklch(60% 0.01 265);
+
+  --tx-on-brand: oklch(100% 0 0);
+
+  --border: oklch(80% 0.02 265 / 0.18);
+  --border-strong: oklch(80% 0.02 265 / 0.28);
+
+  --overlay-bg: oklch(0% 0 0 / 0.55);
+
+  --menu-bg: var(--bg-elev-2);
+  --window-bg: var(--bg-elev-1);
+
+  --icon-w: 64px;
+  --icon-h: 84px;
+  --icon-img-s: 64px;
+  --icon-gap: calc(10px * var(--spacing-scale));
+
+  --shadow-sm: 0 2px 8px oklch(0% 0 0 / 0.35);
+  --shadow-md: 0 8px 24px oklch(0% 0 0 / 0.45);
+  --shadow-lg: 0 16px 48px oklch(0% 0 0 / 0.55);
+  --shadow-depth: 0 24px 64px oklch(0% 0 0 / 0.65);
+
+  --error: oklch(60% 0.2 25);
+  --error-bg: oklch(60% 0.2 25 / 0.12);
+  --error-border: oklch(60% 0.2 25 / 0.25);
+
+  --charging: oklch(65% 0.2 140);
+
+  --shadow-color: rgba(0, 0, 0, 0.65);
+  --surface-1: rgba(18, 18, 24, 0.85);
+  --surface-2: rgba(22, 22, 30, 0.8);
+  --surface-3: rgba(26, 26, 36, 0.75);
+  --glass-hover: rgba(255, 255, 255, 0.12);
+  --text-on-brand: #ffffff;
+
+  --text-xxs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+
+  --blur-xs: 10px;
+  --blur-sm: 12px;
+  --blur-md: 14px;
+  --blur-lg: 24px;
+  --blur-xl: 32px;
+  --blur-2xl: 50px;
+
+  --icon-xs: 16px;
+  --icon-sm: 20px;
+  --icon-md: 24px;
+  --icon-lg: 32px;
+  --icon-xl: 40px;
+  --icon-2xl: 48px;
+
+  --transition-fast: 0.1s;
+  --transition-base: 0.2s;
+  --transition-slow: 0.3s;
+
+  --z-dropdown: 1000;
+  --z-modal: 2000;
+  --z-popover: 3000;
+  --z-tooltip: 4000;
+  --z-overlay: 9999;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-ui);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+html {
+  font-size: calc(16px * var(--font-size-scale)) !important;
+}
+
+body {
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  user-select: none;
+}
+
+#selection-box {
+  border: 1px solid oklch(65% 0.12 230);
+  background: oklch(65% 0.12 230 / 0.18);
+  position: absolute;
+  pointer-events: none;
+  display: none;
+  z-index: 1000;
+  border-radius: 5px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinning {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: oklch(35% 0.02 265 / 0.45);
+  border-radius: 6px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: oklch(45% 0.02 265 / 0.55);
+}
+
+html[data-theme="crt"]::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 999999;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+}
+
+html[data-theme="crt"]::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 999998;
+  background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+html[data-theme="crt"] * {
+  text-shadow:
+    0 0 2px oklch(75% 0.25 145 / 0.5),
+    0 0 4px oklch(75% 0.25 145 / 0.3);
+}
+
+html[data-theme="frutiger-aero"] .window,
+html[data-theme="frutiger-aero"] .context-menu,
+html[data-theme="frutiger-aero"] .taskbar {
+  backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid oklch(100% 0 0 / 0.7);
+  box-shadow:
+    0 10px 30px oklch(60% 0.08 220 / 0.18),
+    inset 0 1px 0 oklch(100% 0 0 / 0.85),
+    inset 0 -1px 0 oklch(70% 0.08 210 / 0.12);
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .window-header,
+html[data-theme="frutiger-aero"] .window-content {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-label-title,
+html[data-theme="frutiger-aero"] .settings-label-desc {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-btn {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] button {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .button-primary {
+  background: linear-gradient(to bottom, oklch(88% 0.08 210), oklch(72% 0.16 220));
+  color: white !important;
+  border: 1px solid oklch(100% 0 0 / 0.6);
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / 0.7),
+    0 4px 12px oklch(72% 0.16 220 / 0.3);
+}
+
+html[data-theme="frutiger-aero"] .workspace-btn {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .workspace-btn:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .workspace-btn.active {
+  background: rgba(72, 16, 220, 0.15) !important;
+  border-color: rgba(72, 16, 220, 0.4) !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .workspace-btn.workspace-add {
+  background: transparent !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] .workspace-btn.workspace-add:hover {
+  color: #1a1a2e !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+html[data-theme="frutiger-aero"] .ov-label {
+  color: #1a1a2e !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+html[data-theme="frutiger-aero"] .ov-window-header {
+  color: #1a1a2e !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+html[data-theme="frutiger-aero"] .ov-window-body {
+  background: rgba(245, 245, 255, 0.9) !important;
+}
+
+html[data-theme="frutiger-aero"] .ov-add-ws {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border: 2px dashed rgba(0, 0, 0, 0.15) !important;
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] .ov-add-ws:hover {
+  background: rgba(72, 16, 220, 0.08) !important;
+  border-color: rgba(72, 16, 220, 0.3) !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] #audio-mixer-panel {
+  background: var(--window-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="frutiger-aero"] .am-title {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="frutiger-aero"] .am-close-btn {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="frutiger-aero"] .am-close-btn:hover {
+  background: rgba(220, 50, 50, 0.15) !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .am-app-name {
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] .am-vol-label {
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] .am-empty {
+  color: #5a5a7e !important;
+}
+
+html[data-theme="frutiger-aero"] .am-slider {
+  background: rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="frutiger-aero"] .am-slider::-webkit-slider-thumb {
+  background: #1a1a2e !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+html[data-theme="frutiger-aero"] .am-slider::-moz-range-thumb {
+  background: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .docked {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(240, 240, 255, 0.95)) !important;
+  border: 2px solid #4810dc !important;
+  box-shadow: 0 0 20px rgba(72, 16, 220, 0.25) !important;
+}
+
+html[data-theme="frutiger-aero"] .docked-btn,
+html[data-theme="frutiger-aero"] .docked a {
+  color: #1a1a2e !important;
+  background: rgba(72, 16, 220, 0.1) !important;
+}
+
+html[data-theme="frutiger-aero"] .docked-btn:hover,
+html[data-theme="frutiger-aero"] .docked a:hover {
+  background: rgba(72, 16, 220, 0.2) !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-btn.danger {
+  background: #ff4d4f !important;
+  color: white !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-card-header[style*="color: #ff4d4f"] {
+  color: #ff4d4f !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-label-title[style*="color: #ff4d4f"] {
+  color: #ff4d4f !important;
+}
+
+html[data-theme="frutiger-aero"] h2[style*="color:#fff"] {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] p[style*="color:rgba(255,255,255,0.5)"],
+html[data-theme="frutiger-aero"] p[style*="color:rgba(255,255,255,0.75)"] {
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] span[style*="color:rgba(255,255,255,0.4)"] {
+  color: #5a5a7e !important;
+}
+
+html[data-theme="frutiger-aero"] .start-menu-item:hover {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .start-menu-item:hover svg {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .start-menu-item:hover span {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .start-cat.active {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .start-cat.active i {
+  color: var(--brand) !important;
+}
+
+html[data-theme="frutiger-aero"] .start-cat:hover {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .start-item:hover {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .start-signout-btn:hover,
+html[data-theme="frutiger-aero"] .start-lock-btn:hover {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .user-tooltip {
+  color: #1a1a2e !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-menu-item {
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-menu-item:hover {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-menu-item.active {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-dropdown {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-dropdown .dropdown-item {
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-dropdown .dropdown-item:hover {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-label-title {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-label-desc {
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-card-header {
+  color: #4a4a6e !important;
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-input {
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: #1a1a2e !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-input::placeholder {
+  color: #5a5a7e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-btn {
+  color: #1a1a2e !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-btn[data-alignment].active {
+  color: white !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-btn[data-alignment].active i:first-child {
+  color: white !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-grid-toggle {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-grid-toggle span:first-child {
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-grid-toggle:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-status-text {
+  color: #5a5a7e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-range-value {
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-select {
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: #1a1a2e !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-select option {
+  background: #fff !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .settings-category-header {
+  color: #1a1a2e !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="frutiger-aero"] .yuki-settings-sidebar {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="frutiger-aero"] .yuki-settings-search input {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .yuki-settings-nav li {
+  color: #4a4a6e !important;
+}
+
+html[data-theme="frutiger-aero"] .yuki-settings-nav li:hover {
+  color: #1a1a2e !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+html[data-theme="frutiger-aero"] .yuki-settings-nav li.active {
+  color: var(--brand) !important;
+}
+
+html[data-theme="frutiger-aero"] .wp-card-name {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .wp-card-btn {
+  color: #4a4a6e !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="frutiger-aero"] .wp-card-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .wp-preview-label {
+  color: #1a1a2e !important;
+}
+
+html[data-theme="frutiger-aero"] .wp-action-btn {
+  color: #4a4a6e !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="frutiger-aero"] .wp-action-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="arctic"] .settings-menu-item {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="arctic"] .settings-menu-item:hover {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="arctic"] .settings-menu-item.active {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="arctic"] .settings-dropdown {
+  background: var(--menu-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .settings-dropdown .dropdown-item {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="arctic"] .settings-dropdown .dropdown-item:hover {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="arctic"] .settings-label-title {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="arctic"] .settings-label-desc {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="arctic"] .settings-card-header {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .settings-input {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .settings-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="arctic"] .settings-btn {
+  color: var(--text-primary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .settings-btn:hover:not(:disabled) {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .settings-btn[data-alignment].active {
+  color: var(--text-on-brand) !important;
+}
+
+html[data-theme="arctic"] .settings-btn[data-alignment].active i:first-child {
+  color: var(--text-on-brand) !important;
+}
+
+html[data-theme="arctic"] .settings-grid-toggle {
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .settings-grid-toggle span:first-child {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="arctic"] .settings-grid-toggle:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .settings-status-text {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="arctic"] .settings-range-value {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="arctic"] .settings-select {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .settings-select option {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="arctic"] .settings-category-header {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .yuki-settings-sidebar {
+  background: var(--surface-1) !important;
+  border-right: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .yuki-settings-search input {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="arctic"] .yuki-settings-nav li {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="arctic"] .yuki-settings-nav li:hover {
+  color: var(--text-primary) !important;
+  background: var(--glass-hover) !important;
+}
+
+html[data-theme="arctic"] .yuki-settings-nav li.active {
+  color: var(--brand) !important;
+}
+
+html[data-theme="arctic"] .wp-card-name {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="arctic"] .wp-card-btn {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .wp-card-btn:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="arctic"] .wp-preview-label {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="arctic"] .wp-action-btn {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="arctic"] .wp-action-btn:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="sakura"] .settings-menu-item {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="sakura"] .settings-menu-item:hover {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="sakura"] .settings-menu-item.active {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="sakura"] .settings-dropdown {
+  background: var(--menu-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .settings-dropdown .dropdown-item {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="sakura"] .settings-dropdown .dropdown-item:hover {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="sakura"] .settings-label-title {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="sakura"] .settings-label-desc {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="sakura"] .settings-card-header {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .settings-input {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .settings-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="sakura"] .settings-btn {
+  color: var(--text-primary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .settings-btn:hover:not(:disabled) {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .settings-btn[data-alignment].active {
+  color: var(--text-on-brand) !important;
+}
+
+html[data-theme="sakura"] .settings-btn[data-alignment].active i:first-child {
+  color: var(--text-on-brand) !important;
+}
+
+html[data-theme="sakura"] .settings-grid-toggle {
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .settings-grid-toggle span:first-child {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="sakura"] .settings-grid-toggle:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .settings-status-text {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="sakura"] .settings-range-value {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="sakura"] .settings-select {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .settings-select option {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="sakura"] .settings-category-header {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .yuki-settings-sidebar {
+  background: var(--surface-1) !important;
+  border-right: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .yuki-settings-search input {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="sakura"] .yuki-settings-nav li {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="sakura"] .yuki-settings-nav li:hover {
+  color: var(--text-primary) !important;
+  background: var(--glass-hover) !important;
+}
+
+html[data-theme="sakura"] .yuki-settings-nav li.active {
+  color: var(--brand) !important;
+}
+
+html[data-theme="sakura"] .wp-card-name {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="sakura"] .wp-card-btn {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .wp-card-btn:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="sakura"] .wp-preview-label {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="sakura"] .wp-action-btn {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="sakura"] .wp-action-btn:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="nordic"] .settings-menu-item {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="nordic"] .settings-menu-item:hover {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="nordic"] .settings-menu-item.active {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="nordic"] .settings-dropdown {
+  background: var(--menu-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .settings-dropdown .dropdown-item {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="nordic"] .settings-dropdown .dropdown-item:hover {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="nordic"] .settings-label-title {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="nordic"] .settings-label-desc {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="nordic"] .settings-card-header {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .settings-input {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .settings-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="nordic"] .settings-btn {
+  color: var(--text-primary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .settings-btn:hover:not(:disabled) {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .settings-btn[data-alignment].active {
+  color: var(--text-on-brand) !important;
+}
+
+html[data-theme="nordic"] .settings-btn[data-alignment].active i:first-child {
+  color: var(--text-on-brand) !important;
+}
+
+html[data-theme="nordic"] .settings-grid-toggle {
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .settings-grid-toggle span:first-child {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="nordic"] .settings-grid-toggle:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .settings-status-text {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="nordic"] .settings-range-value {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="nordic"] .settings-select {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .settings-select option {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="nordic"] .settings-category-header {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .yuki-settings-sidebar {
+  background: var(--surface-1) !important;
+  border-right: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .yuki-settings-search input {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="nordic"] .yuki-settings-nav li {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="nordic"] .yuki-settings-nav li:hover {
+  color: var(--text-primary) !important;
+  background: var(--glass-hover) !important;
+}
+
+html[data-theme="nordic"] .yuki-settings-nav li.active {
+  color: var(--brand) !important;
+}
+
+html[data-theme="nordic"] .wp-card-name {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="nordic"] .wp-card-btn {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .wp-card-btn:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="nordic"] .wp-preview-label {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="nordic"] .wp-action-btn {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="nordic"] .wp-action-btn:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="gameboy"] .settings-menu-item {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="gameboy"] .settings-menu-item:hover {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="gameboy"] .settings-menu-item.active {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="gameboy"] .settings-dropdown {
+  background: var(--menu-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .settings-dropdown .dropdown-item {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="gameboy"] .settings-dropdown .dropdown-item:hover {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="gameboy"] .settings-label-title {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="gameboy"] .settings-label-desc {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="gameboy"] .settings-card-header {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .settings-input {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .settings-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="gameboy"] .settings-btn {
+  color: var(--text-primary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .settings-btn:hover:not(:disabled) {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .settings-btn[data-alignment].active {
+  color: var(--text-on-brand) !important;
+}
+
+html[data-theme="gameboy"] .settings-btn[data-alignment].active i:first-child {
+  color: var(--text-on-brand) !important;
+}
+
+html[data-theme="gameboy"] .settings-grid-toggle {
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .settings-grid-toggle span:first-child {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="gameboy"] .settings-grid-toggle:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .settings-status-text {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="gameboy"] .settings-range-value {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="gameboy"] .settings-select {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .settings-select option {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="gameboy"] .settings-category-header {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .yuki-settings-sidebar {
+  background: var(--surface-1) !important;
+  border-right: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .yuki-settings-search input {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="gameboy"] .yuki-settings-nav li {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="gameboy"] .yuki-settings-nav li:hover {
+  color: var(--text-primary) !important;
+  background: var(--glass-hover) !important;
+}
+
+html[data-theme="gameboy"] .yuki-settings-nav li.active {
+  color: var(--brand) !important;
+}
+
+html[data-theme="gameboy"] .wp-card-name {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="gameboy"] .wp-card-btn {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .wp-card-btn:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="gameboy"] .wp-preview-label {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="gameboy"] .wp-action-btn {
+  color: var(--text-secondary) !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html[data-theme="gameboy"] .wp-action-btn:hover {
+  background: var(--glass-hover) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme] .window {
+  background: var(--window-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 10px 64px var(--shadow-color),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+html[data-theme] .window.transparent {
+  background: transparent;
+}
+
+html[data-theme] .window-header {
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+html[data-theme] .window.transparent .window-header {
+  background: rgba(20, 20, 30, 0.85);
+  backdrop-filter: blur(32px);
+}
+
+html[data-theme] .window-content {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+html[data-theme] .window.transparent .window-content {
+  background: transparent;
+}
+
+html[data-theme] .context-menu-glass {
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 10px 64px var(--shadow-color),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+html[data-theme] .context-menu-item {
+  color: var(--text-primary);
+}
+
+html[data-theme] .context-menu-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme] #taskbar {
+  background: var(--bg-secondary);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 -4px 32px var(--shadow-color);
+  color: var(--text-primary);
+}
+
+html[data-theme] .taskbar-icon {
+  color: var(--text-primary);
+}
+
+html[data-theme] .taskbar-icon:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme] button {
+  color: var(--text-primary);
+}
+
+html[data-theme] button:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  border-color: var(--brand);
+}
+
+html[data-theme] .button-primary {
+  background: var(--brand);
+  color: var(--text-on-brand);
+  border: 1px solid var(--brand);
+}
+
+html[data-theme] .button-primary:hover {
+  background: var(--brand-hover);
+  color: var(--text-on-brand);
+}
+
+html[data-theme] .explorer-sidebar {
+  background: var(--surface-1);
+  border-right: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+html[data-theme] .explorer-sidebar .start-item {
+  color: var(--text-secondary);
+}
+
+html[data-theme] .explorer-sidebar .start-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme] .explorer-sidebar .start-item.active {
+  background: var(--brand-dim);
+  color: var(--brand);
+}
+
+html[data-theme] .tooltip {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px var(--shadow-color);
+}
+
+html[data-theme] .settings-card {
+  background: var(--surface-1);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+html[data-theme] .settings-card-header {
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+html[data-theme] .settings-label-title {
+  color: var(--text-primary);
+}
+
+html[data-theme] .settings-label-desc {
+  color: var(--text-secondary);
+}
+
+html[data-theme] .glass {
+  background: var(--glass);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+html[data-theme] .glass:hover {
+  background: var(--glass-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme] .titlebar {
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+html[data-theme] .dropdown {
+  background: var(--menu-bg);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px var(--shadow-color);
+  color: var(--text-primary);
+}
+
+html[data-theme] .dropdown-item {
+  color: var(--text-primary);
+}
+
+html[data-theme] .dropdown-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme] *::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 6px;
+}
+
+html[data-theme] *::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-hover);
+}
+
+html[data-theme] .notification {
+  background: var(--surface-1);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px var(--shadow-color);
+  color: var(--text-primary);
+}
+
+html[data-theme] .notification-title {
+  color: var(--text-primary);
+}
+
+html[data-theme] .notification-message {
+  color: var(--text-secondary);
+}
+
+html[data-theme] .overlay-dialog {
+  background: var(--surface-1);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 64px var(--shadow-color);
+  color: var(--text-primary);
+}
+
+html[data-theme] .explorer-confirmation-overlay {
+  background: var(--overlay-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+html[data-theme] .icon.selectable:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme] .icon.selectable.selected {
+  background: var(--brand-dim) !important;
+  color: var(--brand) !important;
+  border: 1px solid var(--brand) !important;
+}
+
+html[data-theme="light"] .icon.selectable,
+html[data-theme="light"] .icon.selectable div,
+html[data-theme="cherry"] .icon.selectable,
+html[data-theme="cherry"] .icon.selectable div,
+html[data-theme="github-light"] .icon.selectable,
+html[data-theme="github-light"] .icon.selectable div,
+html[data-theme="minimal-gray"] .icon.selectable,
+html[data-theme="minimal-gray"] .icon.selectable div,
+html[data-theme="paper"] .icon.selectable,
+html[data-theme="paper"] .icon.selectable div,
+html[data-theme="macos-fluent"] .icon.selectable,
+html[data-theme="macos-fluent"] .icon.selectable div,
+html[data-theme="windows-fluent"] .icon.selectable,
+html[data-theme="windows-fluent"] .icon.selectable div,
+html[data-theme="material-you"] .icon.selectable,
+html[data-theme="material-you"] .icon.selectable div,
+html[data-theme="sepia"] .icon.selectable,
+html[data-theme="sepia"] .icon.selectable div,
+html[data-theme="sakura"] .icon.selectable,
+html[data-theme="sakura"] .icon.selectable div,
+html[data-theme="arctic"] .icon.selectable,
+html[data-theme="arctic"] .icon.selectable div,
+html[data-theme="nordic"] .icon.selectable,
+html[data-theme="nordic"] .icon.selectable div,
+html[data-theme="gameboy"] .icon.selectable,
+html[data-theme="gameboy"] .icon.selectable div,
+html[data-theme="frutiger-aero"] .icon.selectable,
+html[data-theme="frutiger-aero"] .icon.selectable div,
+html[data-theme="solarized-light"] .icon.selectable,
+html[data-theme="solarized-light"] .icon.selectable div {
+  text-shadow: none !important;
+}
+
+html[data-theme] .file-item {
+  color: var(--text-primary);
+}
+
+html[data-theme] .file-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme] .file-item.selected {
+  background: var(--brand-dim);
+  color: var(--brand);
+  border: 1px solid var(--brand);
+}
+
+html[data-theme] .conflict-header {
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+html[data-theme] .conflict-title {
+  color: var(--text-primary);
+}
+
+html[data-theme] .conflict-message {
+  color: var(--text-secondary);
+}
+
+html[data-theme] .conflict-file {
+  color: var(--brand);
+}
+
+html[data-theme] .conflict-btn {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+}
+
+html[data-theme] .conflict-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  border-color: var(--brand);
+}
+
+html[data-theme] .conflict-btn-replace {
+  color: var(--error);
+}
+
+html[data-theme] .conflict-btn-keep {
+  color: var(--brand);
+}
+
+html[data-theme] .conflict-btn-skip {
+  color: var(--text-secondary);
+}
+
+html[data-theme] .conflict-footer {
+  color: var(--text-secondary);
+}
+
+html[data-theme] .login-card {
+  background: var(--surface-1);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 64px var(--shadow-color);
+  color: var(--text-primary);
+}
+
+html[data-theme] .login-header h1 {
+  color: var(--text-primary);
+}
+
+html[data-theme] .login-header p {
+  color: var(--text-secondary);
+}
+
+html[data-theme] .login-input {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+}
+
+html[data-theme] .login-input:focus {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-color: var(--brand);
+}
+
+html[data-theme] .login-input::placeholder {
+  color: var(--text-muted);
+}
+
+html[data-theme] .avatar-item {
+  border: 2px solid var(--glass-border);
+}
+
+html[data-theme] .avatar-item:hover {
+  border-color: var(--brand);
+}
+
+html[data-theme] .avatar-item.selected {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px var(--brand-dim);
+}
+
+html[data-theme] .profile-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: 45px;
+  gap: var(--spacing-sm);
+  align-content: start;
+  justify-items: center;
+  min-height: 0;
+}
+
+html[data-theme] .profile-customizer-body .profile-avatar-grid {
+  scrollbar-gutter: stable;
+}
+
+html[data-theme] .profile-avatar-option {
+  width: 45px;
+  height: 45px;
+  aspect-ratio: 1 / 1;
+  border-color: var(--glass-border);
+  background: var(--bg-secondary);
+  transform: translateY(0);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+html[data-theme] .profile-avatar-option:hover {
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
+
+html[data-theme] .profile-avatar-option.selected {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px var(--brand-dim);
+}
+
+html[data-theme] .profile-avatar-check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-dim);
+  color: var(--text-primary);
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+html[data-theme] .profile-avatar-option.selected .profile-avatar-check {
+  opacity: 1;
+}
+
+html[data-theme] #lock-unlock-btn {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+}
+
+html[data-theme] #lock-unlock-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  border-color: var(--brand);
+}
+
+html[data-theme] .lock-user {
+  color: var(--text-primary);
+}
+
+html[data-theme] .lock-time {
+  color: var(--text-secondary);
+}
+
+html[data-theme] .start-menu {
+  background: var(--menu-bg);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 64px var(--shadow-color);
+  color: var(--text-primary);
+}
+
+html.transparent-ui[data-theme] #taskbar {
+  background: transparent !important;
+}
+
+html.transparent-ui[data-theme] .start-menu {
+  background: transparent !important;
+}
+
+html.transparent-ui[data-theme] .window-header {
+  background: transparent !important;
+}
+
+html[data-theme] .start-menu-item {
+  color: var(--text-primary);
+}
+
+html[data-theme] .start-menu-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme] .start-menu-category {
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+html[data-theme] .sidebar-icon-fa {
+  color: var(--brand);
+}
+
+html[data-theme] .explorer-sidebar .start-item:hover .sidebar-icon-fa {
+  color: var(--brand-hover);
+}
+
+.wallpaper-enter {
+  animation: wallpaper-enter 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes wallpaper-enter {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}

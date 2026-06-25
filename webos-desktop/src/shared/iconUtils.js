@@ -1,5 +1,5 @@
-import { appMap } from "../gamesList.js";
-import { resolveIconUrl } from "../assetUrl.js";
+import { SYSTEM_APPS } from "../AppRegistryConfig.js";
+import { resolveIconUrl } from "../shared/assetResolver.js";
 
 export function resolveDesktopIcon(content, fileName = null) {
   let icon = null;
@@ -8,7 +8,11 @@ export function resolveDesktopIcon(content, fileName = null) {
     try {
       const parsed = typeof content === "string" ? JSON.parse(content) : content;
       if (parsed) {
-        icon = parsed.path || appMap[parsed.app]?.icon;
+        if (parsed.type === "youtube-embed") {
+          icon = resolveIconUrl("static/icons/youtube.webp");
+        } else {
+          icon = parsed.icon || parsed.path || SYSTEM_APPS[parsed.app]?.icon;
+        }
       }
     } catch (e) {}
   }
@@ -29,5 +33,24 @@ export function resolveDesktopIcon(content, fileName = null) {
     }
   }
 
-  return icon || resolveIconUrl("static/icons/file.webp");
+  if (!icon) {
+    return resolveIconUrl("static/icons/file.webp");
+  }
+
+  if (
+    typeof icon === "string" &&
+    (icon.startsWith("fa") ||
+      icon.includes(" fa-") ||
+      icon.startsWith("fas ") ||
+      icon.startsWith("fab ") ||
+      icon.startsWith("far "))
+  ) {
+    return icon;
+  }
+
+  if (icon.startsWith("http") || icon.startsWith("static/") || icon.startsWith("/")) {
+    return icon;
+  }
+
+  return resolveIconUrl(icon);
 }
